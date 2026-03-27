@@ -9,11 +9,15 @@ import java.util.List;
 public interface ICustomPlayerData {
     void katamariIO$setSize(float size);
     float katamariIO$getSize();
+    void katamariIO$setCollisionSize(float size);
+    float katamariIO$getCollisionSize();
+    void katamariIO$setRenderSize(float size);
+    float katamariIO$getRenderSize();
 
     void katamariIO$setRestitutionCoefficient(float value);
     float katamariIO$getRestitutionCoefficient();
     void katamariIO$setFlag(boolean flag);
-    void katamariIO$setFlagAndSizeAndRestitution(boolean flag, float size, float value);
+    void katamariIO$setFlagAndSizeAndRestitution(boolean flag, float collisionSize, float renderSize, float value);
     boolean katamariIO$getFlag();
     void katamariIO$setQuaternion(Quaternionf quaternion);
 
@@ -25,6 +29,8 @@ public interface ICustomPlayerData {
     Vec3 katamariIO$getCurrentPosition();
 
     void katamariIO$addBlock(Block block, Quaternionf quaternionf, Vec3 vec3);
+    int katamariIO$getAttachedBlockCount();
+    void katamariIO$clearAttachedBlocks();
 
     List<Vec3> katamariIO$getSphericalPlayerPositions();
     List<Quaternionf> katamariIO$getSphericalPlayerQuaternions();

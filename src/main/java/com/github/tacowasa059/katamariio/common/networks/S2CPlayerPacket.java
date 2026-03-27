@@ -14,14 +14,16 @@ import javax.annotation.Nonnull;
 import java.util.function.Supplier;
 
 public class S2CPlayerPacket {
-    private final float size;
+    private final float collisionSize;
+    private final float renderSize;
     private final boolean flag;
     private final float restitution;
     private final Quaternionf quaternion;
     private final Vec3 currentPosition;
 
-    public S2CPlayerPacket(float size, boolean flag, float restitution, @Nonnull Quaternionf quaternion, @Nonnull Vec3 currentPosition) {
-        this.size = size;
+    public S2CPlayerPacket(float collisionSize, float renderSize, boolean flag, float restitution, @Nonnull Quaternionf quaternion, @Nonnull Vec3 currentPosition) {
+        this.collisionSize = collisionSize;
+        this.renderSize = renderSize;
         this.flag = flag;
         this.restitution = restitution;
         this.quaternion = quaternion;
@@ -29,7 +31,8 @@ public class S2CPlayerPacket {
     }
 
     public static void encode(S2CPlayerPacket packet, FriendlyByteBuf buf) {
-        buf.writeFloat(packet.size);
+        buf.writeFloat(packet.collisionSize);
+        buf.writeFloat(packet.renderSize);
         buf.writeBoolean(packet.flag);
         buf.writeFloat(packet.restitution);
         buf.writeFloat(packet.quaternion.x);
@@ -42,7 +45,8 @@ public class S2CPlayerPacket {
     }
 
     public static S2CPlayerPacket decode(FriendlyByteBuf buf) {
-        float size = buf.readFloat();
+        float collisionSize = buf.readFloat();
+        float renderSize = buf.readFloat();
         boolean flag = buf.readBoolean();
         float restitution = buf.readFloat();
         float x = buf.readFloat();
@@ -51,7 +55,7 @@ public class S2CPlayerPacket {
         float w = buf.readFloat();
         Quaternionf quaternion = new Quaternionf(x, y, z, w);
         Vec3 pos = new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble());
-        return new S2CPlayerPacket(size, flag, restitution, quaternion, pos);
+        return new S2CPlayerPacket(collisionSize, renderSize, flag, restitution, quaternion, pos);
     }
 
     public static void handle(S2CPlayerPacket packet, Supplier<NetworkEvent.Context> ctx) {
@@ -63,7 +67,8 @@ public class S2CPlayerPacket {
     private static void applyToClientPlayer(S2CPlayerPacket packet) {
         Player player = Minecraft.getInstance().player;
         if (player instanceof ICustomPlayerData data) {
-            data.katamariIO$setSize(packet.size);
+            data.katamariIO$setSize(packet.collisionSize);
+            data.katamariIO$setRenderSize(packet.renderSize);
             data.katamariIO$setFlag(packet.flag);
             data.katamariIO$setRestitutionCoefficient(packet.restitution);
 

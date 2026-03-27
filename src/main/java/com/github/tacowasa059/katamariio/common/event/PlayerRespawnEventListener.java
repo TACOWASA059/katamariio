@@ -21,8 +21,10 @@ public class PlayerRespawnEventListener {
         ICustomPlayerData new_playerData = (ICustomPlayerData)newPlayer;
 
         new_playerData.katamariIO$setFlagAndSizeAndRestitution(
-                original_playerData.katamariIO$getFlag(),original_playerData.katamariIO$getSize(),
+                original_playerData.katamariIO$getFlag(), KatamariIO.DEFAULT_BALL_SIZE,
+                KatamariIO.DEFAULT_BALL_SIZE,
                 original_playerData.katamariIO$getRestitutionCoefficient());
+        new_playerData.katamariIO$clearAttachedBlocks();
     }
 
     @SubscribeEvent
@@ -32,6 +34,7 @@ public class PlayerRespawnEventListener {
             ModNetwork.sendInitialData(
                     (ServerPlayer) event.getEntity(),
                     data.katamariIO$getSize(),
+                    data.katamariIO$getRenderSize(),
                     data.katamariIO$getFlag(),
                     data.katamariIO$getRestitutionCoefficient(),
                     data.katamariIO$getQuaternion(),

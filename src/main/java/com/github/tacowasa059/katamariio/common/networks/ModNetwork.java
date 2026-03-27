@@ -33,10 +33,10 @@ public class ModNetwork {
     }
 
     public static void sendInitialData(ServerPlayer player,
-                                       float size, boolean flag, float restitution,
+                                       float collisionSize, float renderSize, boolean flag, float restitution,
                                        Quaternionf quaternion, Vec3 currentPos) {
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                new S2CPlayerPacket(size, flag, restitution, quaternion, currentPos));
+                new S2CPlayerPacket(collisionSize, renderSize, flag, restitution, quaternion, currentPos));
     }
 }
 

@@ -10,6 +10,7 @@ public class KatamariIO {
 
     // Define mod id in a common place for everything to reference
     public static final String MODID = "katamariio";
+    public static final float DEFAULT_BALL_SIZE = 2.0f;
 
     public KatamariIO() {
         ModDataSerializers.register();

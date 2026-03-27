@@ -218,3 +218,4 @@ public abstract class BlockCollisionsMixin<T> extends AbstractIterator<T> {
         return null;
     }
 }
+
