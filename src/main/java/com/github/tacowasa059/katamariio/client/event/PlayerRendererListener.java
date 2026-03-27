@@ -28,12 +28,20 @@ import net.minecraftforge.fml.common.Mod;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Mod.EventBusSubscriber(modid = KatamariIO.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class PlayerRendererListener {
 
     public static double MaxSize = 0;
+    private static final float KATAMARI_BAKED_RENDER_THRESHOLD = 10.0f;
+    private static final int KATAMARI_BAKED_LAT_BINS = 12;
+    private static final int KATAMARI_BAKED_LON_BINS = 24;
+    private static final long KATAMARI_BAKED_REBUILD_TICKS = 10L;
+    private static final Map<Integer, BakedIndexCache> KATAMARI_BAKED_CACHE = new HashMap<>();
 
     @SubscribeEvent
     @OnlyIn(Dist.CLIENT)
@@ -75,6 +83,8 @@ public class PlayerRendererListener {
             SphereRenderer.drawTexturedSphere(poseStack, buffer, texture, renderSize / 2.0f, 12, 0, 0, packedLight,true, overlay);
             poseStack.popPose();
 
+            double tmp_Size = playerData.katamariIO$getRenderSize();
+
             List<Vec3> vec3List = playerData.katamariIO$getSphericalPlayerPositions();
             List<Block> blockList = playerData.katamariIO$getSphericalPlayerBlocks();
             List<Quaternionf> quaternionfList = playerData.katamariIO$getSphericalPlayerQuaternions();
@@ -86,12 +96,22 @@ public class PlayerRendererListener {
             Vector3f viewDirLocal = new Vector3f((float) viewDir.x, (float) viewDir.y, (float) viewDir.z);
             Quaternionf inverseBallRotation = new Quaternionf(quaternion).invert();
             viewDirLocal.rotate(inverseBallRotation);
+            int sharedSize = Math.min(vec3List.size(), Math.min(blockList.size(), quaternionfList.size()));
 
-            double tmp_Size = playerData.katamariIO$getRenderSize();
+            List<Integer> renderIndices;
+            if (renderSize < KATAMARI_BAKED_RENDER_THRESHOLD) {
+                renderIndices = new ArrayList<>(sharedSize);
+                for (int i = 0; i < sharedSize; i++) {
+                    renderIndices.add(i);
+                }
+            } else {
+                renderIndices = katamariIO$getBakedIndices(player, vec3List, sharedSize);
+            }
 
-            for(int i=0; i<vec3List.size(); i++){
+            for(int idx = 0; idx < renderIndices.size(); idx++){
+                int i = renderIndices.get(idx);
                 Vec3 vec = vec3List.get(i);
-                if (!katamariIO$shouldRenderByHash(vec, i, player.getId(), lodStep)) {
+                if (renderSize < KATAMARI_BAKED_RENDER_THRESHOLD && !katamariIO$shouldRenderByHash(vec, i, player.getId(), lodStep)) {
                     continue;
                 }
                 Vector3f localNormal = new Vector3f((float) vec.x, (float) vec.y, (float) vec.z);
@@ -158,6 +178,72 @@ public class PlayerRendererListener {
         long z = Math.round(vec.z * 2.0);
         int hash = (int) (x * 73428767L ^ y * 912931L ^ z * 389129L ^ (long) index * 12289L ^ (long) entityId * 19997L);
         return Math.floorMod(hash, step) == 0;
+    }
+
+    private static List<Integer> katamariIO$getBakedIndices(Player player, List<Vec3> vec3List, int sharedSize) {
+        long nowTick = player.level().getGameTime();
+        int playerId = player.getId();
+        BakedIndexCache cache = KATAMARI_BAKED_CACHE.get(playerId);
+        if (cache != null
+                && cache.sharedSize == sharedSize
+                && nowTick - cache.builtTick < KATAMARI_BAKED_REBUILD_TICKS) {
+            return cache.indices;
+        }
+
+        int totalBins = KATAMARI_BAKED_LAT_BINS * KATAMARI_BAKED_LON_BINS;
+        double[] maxDistSq = new double[totalBins];
+        int[] maxIndex = new int[totalBins];
+        for (int i = 0; i < totalBins; i++) {
+            maxDistSq[i] = -1.0;
+            maxIndex[i] = -1;
+        }
+
+        for (int i = 0; i < sharedSize; i++) {
+            Vec3 vec = vec3List.get(i);
+            double lenSq = vec.lengthSqr();
+            if (lenSq < 1.0E-8) {
+                continue;
+            }
+
+            double len = Math.sqrt(lenSq);
+            double nx = vec.x / len;
+            double ny = vec.y / len;
+            double nz = vec.z / len;
+            int latBin = (int) ((Math.asin(Math.max(-1.0, Math.min(1.0, ny))) + (Math.PI / 2.0)) / Math.PI * KATAMARI_BAKED_LAT_BINS);
+            int lonBin = (int) ((Math.atan2(nz, nx) + Math.PI) / (Math.PI * 2.0) * KATAMARI_BAKED_LON_BINS);
+            if (latBin < 0) latBin = 0;
+            if (latBin >= KATAMARI_BAKED_LAT_BINS) latBin = KATAMARI_BAKED_LAT_BINS - 1;
+            if (lonBin < 0) lonBin = 0;
+            if (lonBin >= KATAMARI_BAKED_LON_BINS) lonBin = KATAMARI_BAKED_LON_BINS - 1;
+            int binIndex = latBin * KATAMARI_BAKED_LON_BINS + lonBin;
+
+            if (lenSq > maxDistSq[binIndex]) {
+                maxDistSq[binIndex] = lenSq;
+                maxIndex[binIndex] = i;
+            }
+        }
+
+        ArrayList<Integer> indices = new ArrayList<>();
+        for (int i = 0; i < totalBins; i++) {
+            if (maxIndex[i] >= 0) {
+                indices.add(maxIndex[i]);
+            }
+        }
+
+        KATAMARI_BAKED_CACHE.put(playerId, new BakedIndexCache(nowTick, sharedSize, indices));
+        return indices;
+    }
+
+    private static class BakedIndexCache {
+        private final long builtTick;
+        private final int sharedSize;
+        private final List<Integer> indices;
+
+        private BakedIndexCache(long builtTick, int sharedSize, List<Integer> indices) {
+            this.builtTick = builtTick;
+            this.sharedSize = sharedSize;
+            this.indices = indices;
+        }
     }
 
 }
