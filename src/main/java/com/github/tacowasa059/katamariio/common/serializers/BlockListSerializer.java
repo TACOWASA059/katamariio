@@ -1,6 +1,6 @@
 package com.github.tacowasa059.katamariio.common.serializers;
 
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.syncher.EntityDataSerializer;
 import net.minecraft.resources.ResourceLocation;
@@ -16,7 +16,7 @@ public class BlockListSerializer implements EntityDataSerializer<List<Block>> {
     public void write(FriendlyByteBuf buf, List<Block> blocks) {
         buf.writeVarInt(blocks.size());
         for (Block block : blocks) {
-            ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
+            ResourceLocation id = ForgeRegistries.BLOCKS.getKey(block);
             buf.writeResourceLocation(id);
         }
     }
@@ -27,7 +27,7 @@ public class BlockListSerializer implements EntityDataSerializer<List<Block>> {
         List<Block> blocks = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
             ResourceLocation id = buf.readResourceLocation();
-            Block block = BuiltInRegistries.BLOCK.get(id);
+            Block block = ForgeRegistries.BLOCKS.getValue(id);
             blocks.add(block);
         }
         return blocks;

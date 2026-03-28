@@ -10,7 +10,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
@@ -164,7 +164,7 @@ public abstract class PlayerMixin implements ICustomPlayerData {
             Block block = blocks.get(i);
             Vec3 pos = positions.get(i);
             Quaternionf quat = quaternions.get(i);
-            ResourceLocation key = BuiltInRegistries.BLOCK.getKey(block);
+            ResourceLocation key = ForgeRegistries.BLOCKS.getKey(block);
             if (key == null) {
                 continue;
             }
@@ -226,10 +226,10 @@ public abstract class PlayerMixin implements ICustomPlayerData {
                 if (key == null) {
                     continue;
                 }
-                if (!BuiltInRegistries.BLOCK.containsKey(key)) {
+                if (!ForgeRegistries.BLOCKS.containsKey(key)) {
                     continue;
                 }
-                Block block = BuiltInRegistries.BLOCK.get(key);
+                Block block = ForgeRegistries.BLOCKS.getValue(key);
 
                 blocks.add(block);
                 positions.add(new Vec3(entry.getDouble("x"), entry.getDouble("y"), entry.getDouble("z")));
