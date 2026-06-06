@@ -169,7 +169,7 @@ public abstract class BlockCollisionsMixin<T> extends AbstractIterator<T> {
 
     @Unique
     private boolean katamariIO$handleCollision(Player player, AABB aabb, VoxelShape shape, int x, int y, int z) {
-        float radius = player.getDimensions(Pose.STANDING).height / 2.0f;
+        float radius = player.getDimensions(Pose.STANDING).height() / 2.0f;
         Vec3 center = player.position().add(0, radius, 0);
         Optional<Vec3> closest = shape.closestPointTo(center);
 

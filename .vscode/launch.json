@@ -4,7 +4,7 @@
     {
       "type": "java",
       "request": "launch",
-      "name": "forge - Client",
+      "name": "Forge Client (:forge)",
       "presentation": {
         "group": "Mod Development - forge",
         "order": 0
@@ -18,17 +18,14 @@
         "@C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\forge\\build\\moddev\\clientRunVmArgs.txt",
         "-Dfml.modFolders\u003dkatamariio%%C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\forge\\bin\\main"
       ],
-      "cwd": "${workspaceFolder}\\forge\\run",
-      "env": {
-        "MOD_CLASSES": "katamariio%%C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\forge\\bin\\main"
-      },
+      "cwd": "${workspaceFolder}\\forge\\runs\\client",
       "console": "internalConsole",
       "shortenCommandLine": "none"
     },
     {
       "type": "java",
       "request": "launch",
-      "name": "forge - Server",
+      "name": "Forge Server (:forge)",
       "presentation": {
         "group": "Mod Development - forge",
         "order": 1
@@ -42,10 +39,70 @@
         "@C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\forge\\build\\moddev\\serverRunVmArgs.txt",
         "-Dfml.modFolders\u003dkatamariio%%C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\forge\\bin\\main"
       ],
-      "cwd": "${workspaceFolder}\\forge\\run",
-      "env": {
-        "MOD_CLASSES": "katamariio%%C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\forge\\bin\\main"
+      "cwd": "${workspaceFolder}\\forge\\runs\\server",
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "NeoForge Client (:neoforge)",
+      "presentation": {
+        "group": "Mod Development - neoforge",
+        "order": 0
       },
+      "projectName": "neoforge",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\neoforge\\build\\moddev\\clientRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\neoforge\\build\\moddev\\clientRunVmArgs.txt",
+        "-Dfml.modFolders\u003dkatamariio%%C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\neoforge\\bin\\main"
+      ],
+      "cwd": "${workspaceFolder}\\neoforge\\run",
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "NeoForge Data (:neoforge)",
+      "presentation": {
+        "group": "Mod Development - neoforge",
+        "order": 1
+      },
+      "projectName": "neoforge",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\neoforge\\build\\moddev\\dataRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\neoforge\\build\\moddev\\dataRunVmArgs.txt",
+        "-Dfml.modFolders\u003dkatamariio%%C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\neoforge\\bin\\main"
+      ],
+      "cwd": "${workspaceFolder}\\neoforge\\run",
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "NeoForge Server (:neoforge)",
+      "presentation": {
+        "group": "Mod Development - neoforge",
+        "order": 2
+      },
+      "projectName": "neoforge",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\neoforge\\build\\moddev\\serverRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\neoforge\\build\\moddev\\serverRunVmArgs.txt",
+        "-Dfml.modFolders\u003dkatamariio%%C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\neoforge\\bin\\main"
+      ],
+      "cwd": "${workspaceFolder}\\neoforge\\run",
       "console": "internalConsole",
       "shortenCommandLine": "none"
     }

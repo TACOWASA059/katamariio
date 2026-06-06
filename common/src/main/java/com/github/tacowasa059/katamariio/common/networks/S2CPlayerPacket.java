@@ -24,6 +24,30 @@ public class S2CPlayerPacket {
         this.currentPosition = currentPosition;
     }
 
+    public float collisionSize() {
+        return this.collisionSize;
+    }
+
+    public float renderSize() {
+        return this.renderSize;
+    }
+
+    public boolean flag() {
+        return this.flag;
+    }
+
+    public float restitution() {
+        return this.restitution;
+    }
+
+    public Quaternionf quaternion() {
+        return this.quaternion;
+    }
+
+    public Vec3 currentPosition() {
+        return this.currentPosition;
+    }
+
     public static void encode(S2CPlayerPacket packet, FriendlyByteBuf buf) {
         buf.writeFloat(packet.collisionSize);
         buf.writeFloat(packet.renderSize);

@@ -1,7 +1,6 @@
 package com.github.tacowasa059.katamariio;
 
 import com.github.tacowasa059.katamariio.common.networks.ModNetwork;
-import com.github.tacowasa059.katamariio.common.serializers.ModDataSerializers;
 
 public final class KatamariIO {
     public static final String MODID = "katamariio";
@@ -17,7 +16,6 @@ public final class KatamariIO {
             return;
         }
         initialized = true;
-        ModDataSerializers.register();
         ModNetwork.register();
     }
 }

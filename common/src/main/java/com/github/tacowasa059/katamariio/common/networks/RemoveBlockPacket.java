@@ -20,6 +20,14 @@ public class RemoveBlockPacket {
         this.playerPos = loc;
     }
 
+    public BlockPos pos() {
+        return this.pos;
+    }
+
+    public Vec3 playerPos() {
+        return this.playerPos;
+    }
+
     public static RemoveBlockPacket decode(FriendlyByteBuf buf) {
         return new RemoveBlockPacket(buf.readBlockPos(), new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()));
     }

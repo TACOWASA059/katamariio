@@ -27,35 +27,6 @@ Enable/disable ball mode.
 - `/katamari resetBlocks <targets>`
 Clear attached blocks and reset collision/render size to `KatamariIO.DEFAULT_BALL_SIZE` (currently `2.0f`).
 
-## Player NBT
-Custom player data is saved in player NBT via `PlayerMixin#addAdditionalSaveData`.
-
-- `SPM_Size` (`float`)
-Collision size.
-
-- `SPM_RenderSize` (`float`)
-Render size.
-
-- `SPM_isBall` (`boolean`)
-Ball mode flag.
-
-- `SPM_RESTITUTION` (`float`)
-Restitution coefficient.
-
-- `SPM_Quaternion` (`compound`)
-Current quaternion: `x`, `y`, `z`, `w`.
-
-- `SPM_POSITION` (`compound`)
-Current position cache: `x`, `y`, `z`.
-
-- `SPM_BlockCount` (`int`)
-Total attached-block count metric.
-
-- `SPM_AttachedBlocks` (`list<compound>`)
-Attached block entries for sync/render.  
-Each entry has:
-`block` (resource location string), `x`, `y`, `z`, `qx`, `qy`, `qz`, `qw`.
-
 ## NBT command examples
 - `/data get entity @s SPM_BlockCount`
 - `/data get entity @s SPM_Size`

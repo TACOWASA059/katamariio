@@ -3,8 +3,12 @@ package com.github.tacowasa059.katamariio.mixin.common;
 import com.github.tacowasa059.katamariio.common.accessors.ICustomPlayerData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityAttachment;
+import net.minecraft.world.entity.EntityAttachments;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -94,6 +98,19 @@ public abstract class LivingEntityMixin extends Entity {
         if (entity instanceof Player player && ((ICustomPlayerData) player).katamariIO$getFlag()) {
             cir.setReturnValue(false);
             cir.cancel();
+        }
+    }
+
+    @Inject(method = "getDimensions", at = @At("HEAD"), cancellable = true)
+    public void getDimensions(Pose pose, CallbackInfoReturnable<EntityDimensions> cir) {
+        LivingEntity entity = (LivingEntity) (Object) this;
+        if (entity instanceof Player player && ((ICustomPlayerData) player).katamariIO$getFlag()) {
+            float size = ((ICustomPlayerData) player).katamariIO$getSize();
+            cir.setReturnValue(
+                    EntityDimensions.scalable(size, size)
+                            .withEyeHeight(0.85F * size)
+                            .withAttachments(EntityAttachments.builder().attach(EntityAttachment.VEHICLE, new Vec3(0.0, 0.15, 0.0)))
+            );
         }
     }
 }

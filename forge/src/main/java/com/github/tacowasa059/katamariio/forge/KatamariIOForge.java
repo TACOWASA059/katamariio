@@ -4,6 +4,7 @@ import com.github.tacowasa059.katamariio.KatamariIO;
 import com.github.tacowasa059.katamariio.common.commands.KatamariCommands;
 import com.github.tacowasa059.katamariio.common.event.PlayerRespawnEventListener;
 import com.github.tacowasa059.katamariio.common.networks.ModNetwork;
+import com.github.tacowasa059.katamariio.common.serializers.ModDataSerializers;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -13,6 +14,7 @@ import net.minecraftforge.fml.common.Mod;
 public class KatamariIOForge {
     public KatamariIOForge() {
         ModNetwork.bootstrap(new ForgeModNetwork());
+        ModDataSerializers.registerVanilla();
         KatamariIO.init();
 
         MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);

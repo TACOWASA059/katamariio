@@ -50,7 +50,7 @@ public final class KatamariPlayerRenderer {
         float renderSize = playerData.katamariIO$getRenderSize();
         float collisionSize = playerData.katamariIO$getSize();
         Quaternionf quaternion = playerData.katamariIO$getInterpolatedQuaternion(partialTicks);
-        ResourceLocation texture = player.getSkinTextureLocation();
+        ResourceLocation texture = player.getSkin().texture();
 
         poseStack.pushPose();
         poseStack.translate(0, collisionSize / 2.0, 0);
@@ -130,7 +130,7 @@ public final class KatamariPlayerRenderer {
         EntityRenderer<?> entityRenderer = Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(player);
         if (player instanceof RemotePlayer && entityRenderer instanceof IPlayerRendererAccessor accessor) {
             if (accessor.katamariIO$shouldShowName(player)) {
-                accessor.katamariIO$callRenderName(player, player.getDisplayName(), poseStack, buffer, packedLight);
+                accessor.katamariIO$callRenderName(player, player.getDisplayName(), poseStack, buffer, packedLight, partialTicks);
             }
         }
 

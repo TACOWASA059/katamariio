@@ -15,17 +15,17 @@ public class CameraMixin {
             method = "setup",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/client/Camera;getMaxZoom(D)D"
+                    target = "Lnet/minecraft/client/Camera;getMaxZoom(F)F"
             )
     )
-    private double katamariIO$redirectCameraDistance(Camera instance, double originalDistance) {
+    private float katamariIO$redirectCameraDistance(Camera instance, float originalDistance) {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) {
             return 4.0f;
         }
 
         if (((ICustomPlayerData) player).katamariIO$getFlag()) {
-            return KatamariPlayerRenderer.MAX_SIZE * 2;
+            return (float) (KatamariPlayerRenderer.MAX_SIZE * 2.0);
         }
         return 4.0f;
     }

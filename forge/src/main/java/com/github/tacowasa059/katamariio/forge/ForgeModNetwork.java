@@ -8,54 +8,43 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
+import net.minecraftforge.network.ChannelBuilder;
 import net.minecraftforge.network.NetworkDirection;
-import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.network.simple.SimpleChannel;
-
-import java.util.Optional;
+import net.minecraftforge.network.SimpleChannel;
 
 @SuppressWarnings("removal")
 public class ForgeModNetwork implements ModNetwork.NetworkHandler {
-    private static final String PROTOCOL_VERSION = "1";
-    private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation(KatamariIO.MODID, "main"),
-            () -> PROTOCOL_VERSION,
-            PROTOCOL_VERSION::equals,
-            PROTOCOL_VERSION::equals
-    );
+    private static final int PROTOCOL_VERSION = 1;
+    private static final SimpleChannel CHANNEL = ChannelBuilder
+            .named(ResourceLocation.fromNamespaceAndPath(KatamariIO.MODID, "main"))
+            .networkProtocolVersion(PROTOCOL_VERSION)
+            .simpleChannel();
 
     private int nextId;
 
     @Override
     public void register() {
-        CHANNEL.registerMessage(nextId++, RemoveBlockPacket.class,
-                RemoveBlockPacket::encode,
-                RemoveBlockPacket::decode,
-                (packet, contextSupplier) -> {
-                    var context = contextSupplier.get();
-                    context.enqueueWork(() -> packet.handle(context.getSender()));
-                    context.setPacketHandled(true);
-                });
-        CHANNEL.registerMessage(nextId++, S2CPlayerPacket.class,
-                S2CPlayerPacket::encode,
-                S2CPlayerPacket::decode,
-                (packet, contextSupplier) -> {
-                    var context = contextSupplier.get();
-                    context.enqueueWork(() ->
-                            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ForgeClientStateSync.receive(packet)));
-                    context.setPacketHandled(true);
-                },
-                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.messageBuilder(RemoveBlockPacket.class, nextId++)
+                .encoder(RemoveBlockPacket::encode)
+                .decoder(RemoveBlockPacket::decode)
+                .consumerMainThread((packet, context) -> packet.handle(context.getSender()))
+                .add();
+        CHANNEL.messageBuilder(S2CPlayerPacket.class, nextId++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(S2CPlayerPacket::encode)
+                .decoder(S2CPlayerPacket::decode)
+                .consumerMainThread((packet, context) ->
+                        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ForgeClientStateSync.receive(packet)))
+                .add();
     }
 
     @Override
     public void sendToServer(RemoveBlockPacket packet) {
-        CHANNEL.sendToServer(packet);
+        CHANNEL.send(packet, PacketDistributor.SERVER.noArg());
     }
 
     @Override
     public void sendInitialData(ServerPlayer player, S2CPlayerPacket packet) {
-        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), packet);
+        CHANNEL.send(packet, PacketDistributor.PLAYER.with(player));
     }
 }

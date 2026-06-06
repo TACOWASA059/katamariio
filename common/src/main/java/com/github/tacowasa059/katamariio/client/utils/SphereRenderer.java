@@ -9,6 +9,7 @@ import org.joml.AxisAngle4f;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 public class SphereRenderer {
     public static <T extends MultiBufferSource> void drawTexturedSphere(PoseStack poseStack, T buffer,
@@ -139,24 +140,32 @@ public class SphereRenderer {
     private static void addSideSphereQuads(VertexConsumer vertexConsumer, Matrix4f positionMatrix, Matrix3f normalMatrix,
                                            float x, float z, float[] posList, float[] uvList, int packedLight, boolean lightmap2, int overlay) {
         if (lightmap2) {
-            vertexConsumer.vertex(positionMatrix, posList[0] + x, posList[1], posList[2] + z).color(1.0f, 1.0f, 1.0f, 1.0f)
-                    .uv(uvList[0], uvList[1]).overlayCoords(overlay).uv2(packedLight).normal(normalMatrix, posList[0], posList[1], posList[2]).endVertex();
-            vertexConsumer.vertex(positionMatrix, posList[3] + x, posList[4], posList[5] + z).color(1.0f, 1.0f, 1.0f, 1.0f)
-                    .uv(uvList[2], uvList[3]).overlayCoords(overlay).uv2(packedLight).normal(normalMatrix, posList[3], posList[4], posList[5]).endVertex();
-            vertexConsumer.vertex(positionMatrix, posList[9] + x, posList[10], posList[11] + z).color(1.0f, 1.0f, 1.0f, 1.0f)
-                    .uv(uvList[6], uvList[7]).overlayCoords(overlay).uv2(packedLight).normal(normalMatrix, posList[9], posList[10], posList[11]).endVertex();
-            vertexConsumer.vertex(positionMatrix, posList[6] + x, posList[7], posList[8] + z).color(1.0f, 1.0f, 1.0f, 1.0f)
-                    .uv(uvList[4], uvList[5]).overlayCoords(overlay).uv2(packedLight).normal(normalMatrix, posList[6], posList[7], posList[8]).endVertex();
+            Vector3f normal0 = transformNormal(normalMatrix, posList[0], posList[1], posList[2]);
+            Vector3f normal1 = transformNormal(normalMatrix, posList[3], posList[4], posList[5]);
+            Vector3f normal2 = transformNormal(normalMatrix, posList[9], posList[10], posList[11]);
+            Vector3f normal3 = transformNormal(normalMatrix, posList[6], posList[7], posList[8]);
+            vertexConsumer.addVertex(positionMatrix, posList[0] + x, posList[1], posList[2] + z).setColor(1.0f, 1.0f, 1.0f, 1.0f)
+                    .setUv(uvList[0], uvList[1]).setOverlay(overlay).setLight(packedLight).setNormal(normal0.x(), normal0.y(), normal0.z());
+            vertexConsumer.addVertex(positionMatrix, posList[3] + x, posList[4], posList[5] + z).setColor(1.0f, 1.0f, 1.0f, 1.0f)
+                    .setUv(uvList[2], uvList[3]).setOverlay(overlay).setLight(packedLight).setNormal(normal1.x(), normal1.y(), normal1.z());
+            vertexConsumer.addVertex(positionMatrix, posList[9] + x, posList[10], posList[11] + z).setColor(1.0f, 1.0f, 1.0f, 1.0f)
+                    .setUv(uvList[6], uvList[7]).setOverlay(overlay).setLight(packedLight).setNormal(normal2.x(), normal2.y(), normal2.z());
+            vertexConsumer.addVertex(positionMatrix, posList[6] + x, posList[7], posList[8] + z).setColor(1.0f, 1.0f, 1.0f, 1.0f)
+                    .setUv(uvList[4], uvList[5]).setOverlay(overlay).setLight(packedLight).setNormal(normal3.x(), normal3.y(), normal3.z());
         } else {
-            vertexConsumer.vertex(positionMatrix, posList[0] + x, posList[1], posList[2] + z).color(1.0f, 1.0f, 1.0f, 1.0f)
-                    .uv(uvList[0], uvList[1]).overlayCoords(overlay).uv2(packedLight).normal(posList[0], posList[1], posList[2]).endVertex();
-            vertexConsumer.vertex(positionMatrix, posList[3] + x, posList[4], posList[5] + z).color(1.0f, 1.0f, 1.0f, 1.0f)
-                    .uv(uvList[2], uvList[3]).overlayCoords(overlay).uv2(packedLight).normal(posList[3], posList[4], posList[5]).endVertex();
-            vertexConsumer.vertex(positionMatrix, posList[9] + x, posList[10], posList[11] + z).color(1.0f, 1.0f, 1.0f, 1.0f)
-                    .uv(uvList[6], uvList[7]).overlayCoords(overlay).uv2(packedLight).normal(posList[9], posList[10], posList[11]).endVertex();
-            vertexConsumer.vertex(positionMatrix, posList[6] + x, posList[7], posList[8] + z).color(1.0f, 1.0f, 1.0f, 1.0f)
-                    .uv(uvList[4], uvList[5]).overlayCoords(overlay).uv2(packedLight).normal(posList[6], posList[7], posList[8]).endVertex();
+            vertexConsumer.addVertex(positionMatrix, posList[0] + x, posList[1], posList[2] + z).setColor(1.0f, 1.0f, 1.0f, 1.0f)
+                    .setUv(uvList[0], uvList[1]).setOverlay(overlay).setLight(packedLight).setNormal(posList[0], posList[1], posList[2]);
+            vertexConsumer.addVertex(positionMatrix, posList[3] + x, posList[4], posList[5] + z).setColor(1.0f, 1.0f, 1.0f, 1.0f)
+                    .setUv(uvList[2], uvList[3]).setOverlay(overlay).setLight(packedLight).setNormal(posList[3], posList[4], posList[5]);
+            vertexConsumer.addVertex(positionMatrix, posList[9] + x, posList[10], posList[11] + z).setColor(1.0f, 1.0f, 1.0f, 1.0f)
+                    .setUv(uvList[6], uvList[7]).setOverlay(overlay).setLight(packedLight).setNormal(posList[9], posList[10], posList[11]);
+            vertexConsumer.addVertex(positionMatrix, posList[6] + x, posList[7], posList[8] + z).setColor(1.0f, 1.0f, 1.0f, 1.0f)
+                    .setUv(uvList[4], uvList[5]).setOverlay(overlay).setLight(packedLight).setNormal(posList[6], posList[7], posList[8]);
         }
+    }
+
+    private static Vector3f transformNormal(Matrix3f normalMatrix, float x, float y, float z) {
+        return normalMatrix.transform(new Vector3f(x, y, z)).normalize();
     }
 
     private static float getSquareZ(float x1, float z1, float cubeSize) {

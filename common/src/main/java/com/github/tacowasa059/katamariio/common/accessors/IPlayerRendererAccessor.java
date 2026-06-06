@@ -8,7 +8,7 @@ import net.minecraft.world.entity.player.Player;
 
 public interface IPlayerRendererAccessor {
     void katamariIO$callRenderName(AbstractClientPlayer player, Component name,
-                                   PoseStack matrixStack, MultiBufferSource buffer, int packedLight);
+                                   PoseStack matrixStack, MultiBufferSource buffer, int packedLight, float partialTicks);
     boolean katamariIO$shouldShowName(Player player);
 }
 

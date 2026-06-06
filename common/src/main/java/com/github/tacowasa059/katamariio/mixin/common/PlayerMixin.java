@@ -77,7 +77,7 @@ public abstract class PlayerMixin implements ICustomPlayerData {
     private boolean katamariIO$binRadiiDirty = true;
 
     @Inject(method = "tick", at = @At("HEAD"))
-    protected void tick(CallbackInfo ci) {
+    protected void katamariIO$tick(CallbackInfo ci) {
         if (!sphericalPlayerMod$initialized) {
             sphericalPlayerMod$quaternion = katamariIO$getValidQuaternion(katamariIO$getQuaternion());
             sphericalPlayerMod$prevQuaternion = katamariIO$getValidQuaternion(katamariIO$getQuaternion());
@@ -95,8 +95,8 @@ public abstract class PlayerMixin implements ICustomPlayerData {
             sphericalPlayerMod$quaternion = katamariIO$getValidQuaternion(quaternion);
             EntityDimensions expectedDimensions = player.getDimensions(player.getPose());
             if (player.tickCount % 5 == 0
-                    && (Math.abs(expectedDimensions.width - (float) player.getBoundingBox().getXsize()) > 1.0E-4f
-                    || Math.abs(expectedDimensions.height - (float) player.getBoundingBox().getYsize()) > 1.0E-4f)) {
+                    && (Math.abs(expectedDimensions.width() - (float) player.getBoundingBox().getXsize()) > 1.0E-4f
+                    || Math.abs(expectedDimensions.height() - (float) player.getBoundingBox().getYsize()) > 1.0E-4f)) {
                 player.refreshDimensions();
             }
         }
@@ -108,29 +108,28 @@ public abstract class PlayerMixin implements ICustomPlayerData {
     }
 
     @Inject(method = "defineSynchedData", at = @At("TAIL"))
-    protected void defineSynchedData(CallbackInfo ci) {
-        Player entity = (Player) (Object) this;
-        entity.getEntityData().define(sphericalPlayerMod$SIZE, KatamariIO.DEFAULT_BALL_SIZE);
-        entity.getEntityData().define(sphericalPlayerMod$RENDER_SIZE, KatamariIO.DEFAULT_BALL_SIZE);
-        entity.getEntityData().define(sphericalPlayerMod$FLAG, true);
+    protected void defineSynchedData(SynchedEntityData.Builder builder, CallbackInfo ci) {
+        builder.define(sphericalPlayerMod$SIZE, KatamariIO.DEFAULT_BALL_SIZE);
+        builder.define(sphericalPlayerMod$RENDER_SIZE, KatamariIO.DEFAULT_BALL_SIZE);
+        builder.define(sphericalPlayerMod$FLAG, true);
         CompoundTag quaternionTag = new CompoundTag();
         quaternionTag.putFloat("x", 0f);
         quaternionTag.putFloat("y", 0f);
         quaternionTag.putFloat("z", 0f);
         quaternionTag.putFloat("w", 1f);
-        entity.getEntityData().define(sphericalPlayerMod$QUATERNION, quaternionTag);
-        entity.getEntityData().define(RESTITUTION_COEFFICIENT, 0.55f);
+        builder.define(sphericalPlayerMod$QUATERNION, quaternionTag);
+        builder.define(RESTITUTION_COEFFICIENT, 0.55f);
 
         CompoundTag positionTag = new CompoundTag();
         positionTag.putFloat("x", 0);
         positionTag.putFloat("y", 0);
         positionTag.putFloat("z", 0);
-        entity.getEntityData().define(CURRENT_POSITION, positionTag);
+        builder.define(CURRENT_POSITION, positionTag);
 
-        entity.getEntityData().define(SPHERICAL_PLAYER_POSITION_LIST, new ArrayList<>());
-        entity.getEntityData().define(SPHERICAL_PLAYER_QUATERNION_LIST, new ArrayList<>());
-        entity.getEntityData().define(SPHERICAL_PLAYER_BLOCK_LIST, new ArrayList<>());
-        entity.getEntityData().define(SPHERICAL_PLAYER_BLOCK_COUNT, 0);
+        builder.define(SPHERICAL_PLAYER_POSITION_LIST, new ArrayList<>());
+        builder.define(SPHERICAL_PLAYER_QUATERNION_LIST, new ArrayList<>());
+        builder.define(SPHERICAL_PLAYER_BLOCK_LIST, new ArrayList<>());
+        builder.define(SPHERICAL_PLAYER_BLOCK_COUNT, 0);
     }
 
     @Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
@@ -232,13 +231,6 @@ public abstract class PlayerMixin implements ICustomPlayerData {
             dataManager.set(SPHERICAL_PLAYER_QUATERNION_LIST, quaternions, true);
             dataManager.set(SPHERICAL_PLAYER_BLOCK_COUNT, blocks.size());
             katamariIO$binRadiiDirty = true;
-        }
-    }
-
-    @Inject(method = "getStandingEyeHeight", at = @At("HEAD"), cancellable = true)
-    public void getStandingEyeHeight(Pose pose, EntityDimensions dimensions, CallbackInfoReturnable<Float> cir) {
-        if (katamariIO$getFlag()) {
-            cir.setReturnValue(0.85F * katamariIO$getSize());
         }
     }
 
@@ -357,21 +349,6 @@ public abstract class PlayerMixin implements ICustomPlayerData {
                 compoundNbt.getFloat("y"),
                 compoundNbt.getFloat("z")
         );
-    }
-
-    @Inject(method = "getMyRidingOffset", at = @At("HEAD"), cancellable = true)
-    public void getYOffset(CallbackInfoReturnable<Double> cir) {
-        if (katamariIO$getFlag()) {
-            cir.setReturnValue(0.15);
-        }
-    }
-
-    @Inject(method = "getDimensions", at = @At("HEAD"), cancellable = true)
-    public void getDimensions(Pose pose, CallbackInfoReturnable<EntityDimensions> cir) {
-        if (katamariIO$getFlag()) {
-            cir.setReturnValue(EntityDimensions.scalable(katamariIO$getSize(), katamariIO$getSize()));
-            cir.cancel();
-        }
     }
 
     @Inject(method = "maybeBackOffFromEdge", at = @At("HEAD"), cancellable = true)

@@ -16,14 +16,14 @@ public class FabricLivingEntityTravelMixin {
     @Inject(method = "travel", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;setDeltaMovement(DDD)V", ordinal = 2),
             locals = LocalCapture.CAPTURE_FAILSOFT, cancellable = true)
     private void injectCustomMotion(Vec3 travelVector, CallbackInfo ci, double d0, boolean flag,
-                                    FluidState fluidstate, BlockPos blockpos, float f2, float f3, Vec3 vec35, double d2) {
+                                    FluidState fluidstate, BlockPos blockpos, float f2, float f3, Vec3 vec35) {
         KatamariTravel.applyCustomMotion((LivingEntity) (Object) this, vec35, ci);
     }
 
     @Inject(method = "travel", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;setDeltaMovement(DDD)V", ordinal = 3),
             locals = LocalCapture.CAPTURE_FAILSOFT, cancellable = true)
     private void injectCustomMotion2(Vec3 travelVector, CallbackInfo ci, double d0, boolean flag,
-                                     FluidState fluidstate, BlockPos blockpos, float f2, float f3, Vec3 vec35, double d2) {
+                                     FluidState fluidstate, BlockPos blockpos, float f2, float f3, Vec3 vec35) {
         KatamariTravel.applyCustomMotion((LivingEntity) (Object) this, vec35, ci);
     }
 }

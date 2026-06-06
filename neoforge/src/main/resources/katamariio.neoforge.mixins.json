@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.github.tacowasa059.katamariio.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "neoforge.NeoForgeLivingEntityTravelMixin"
+  ],
+  "client": [],
+  "server": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

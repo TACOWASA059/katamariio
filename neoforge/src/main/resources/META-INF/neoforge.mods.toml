@@ -1,0 +1,32 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+
+[[mods]]
+modId = "katamariio"
+version = "1.0.1"
+displayName = "KatamariIO"
+logoFile = "icon.png"
+credits = ""
+authors = "TACOWASA059"
+description = ""
+
+[[mixins]]
+config = "katamariio.mixins.json"
+
+[[mixins]]
+config = "katamariio.neoforge.mixins.json"
+
+[[dependencies.katamariio]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.80,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.katamariio]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1, 1.22)"
+ordering = "NONE"
+side = "BOTH"

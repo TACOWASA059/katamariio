@@ -10,9 +10,6 @@ public class KatamariIOFabricClient implements ClientModInitializer {
     public void onInitializeClient() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> FabricClientStateSync.flushPending());
         ClientPlayNetworking.registerGlobalReceiver(FabricModNetwork.S2C_PLAYER_ID,
-                (client, handler, buf, responseSender) -> {
-                    S2CPlayerPacket packet = S2CPlayerPacket.decode(buf);
-                    client.execute(() -> FabricClientStateSync.receive(packet));
-                });
+                (payload, context) -> FabricClientStateSync.receive(payload.toPacket()));
     }
 }
