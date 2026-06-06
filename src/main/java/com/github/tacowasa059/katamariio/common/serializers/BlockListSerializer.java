@@ -5,6 +5,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.syncher.EntityDataSerializer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -17,7 +18,7 @@ public class BlockListSerializer implements EntityDataSerializer<List<Block>> {
         buf.writeVarInt(blocks.size());
         for (Block block : blocks) {
             ResourceLocation id = ForgeRegistries.BLOCKS.getKey(block);
-            buf.writeResourceLocation(id);
+            if(id!=null) buf.writeResourceLocation(id);
         }
     }
 
