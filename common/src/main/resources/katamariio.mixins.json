@@ -1,0 +1,22 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.github.tacowasa059.katamariio.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "katamariio.refmap.json",
+  "mixins": [
+    "common.BlockCollisionsMixin",
+    "common.EntityMixin",
+    "common.LivingEntityMixin",
+    "common.PlayerMixin"
+  ],
+  "client": [
+    "client.CameraMixin",
+    "client.GameRendererMixin",
+    "client.KeyboardInputMixin",
+    "client.PlayerRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

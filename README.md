@@ -1,6 +1,6 @@
 # KatamariIO
+![image](common/src/main/resources/icon.png)
 
-Forge 1.20.1 mod.
 
 https://github.com/user-attachments/assets/33ec2c37-4ff6-4192-b9e5-03bcf725ee65
 
@@ -59,4 +59,3 @@ Each entry has:
 ## NBT command examples
 - `/data get entity @s SPM_BlockCount`
 - `/data get entity @s SPM_Size`
-
