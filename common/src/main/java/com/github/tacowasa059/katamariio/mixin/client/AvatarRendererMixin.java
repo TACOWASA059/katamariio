@@ -102,7 +102,6 @@ public abstract class AvatarRendererMixin {
                     renderState.scoreText,
                     !renderState.isDiscrete,
                     renderState.lightCoords,
-                    renderState.distanceToCameraSq,
                     cameraRenderState
             );
             poseStack.translate(0.0F, 9.0F * 1.15F * 0.025F, 0.0F);
@@ -116,7 +115,6 @@ public abstract class AvatarRendererMixin {
                     renderState.nameTag,
                     !renderState.isDiscrete,
                     renderState.lightCoords,
-                    renderState.distanceToCameraSq,
                     cameraRenderState
             );
         }

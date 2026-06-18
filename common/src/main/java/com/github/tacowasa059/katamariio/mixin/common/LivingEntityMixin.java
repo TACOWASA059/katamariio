@@ -2,6 +2,7 @@ package com.github.tacowasa059.katamariio.mixin.common;
 
 import com.github.tacowasa059.katamariio.common.accessors.ICustomPlayerData;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityAttachment;
 import net.minecraft.world.entity.EntityAttachments;
@@ -26,8 +27,8 @@ public abstract class LivingEntityMixin extends Entity {
         super(entityType, level);
     }
 
-    @Inject(method = "knockback", at = @At("HEAD"), cancellable = true)
-    public void modifyKnockback(double strength, double ratioX, double ratioZ, CallbackInfo ci) {
+    @Inject(method = "knockback(DDDLnet/minecraft/world/damagesource/DamageSource;FZ)V", at = @At("HEAD"), cancellable = true)
+    public void modifyKnockback(double strength, double ratioX, double ratioZ, DamageSource source, float damage, boolean comesFromEffect, CallbackInfo ci) {
         LivingEntity entity = (LivingEntity) (Object) this;
         if (!(entity instanceof Player)) {
             return;

@@ -155,7 +155,7 @@ public final class KatamariPlayerRenderer {
             blockModel.collectParts(blockRandom, modelParts);
             if (!modelParts.isEmpty()) {
                 RenderType blockRenderType = blockModel.hasMaterialFlag(1)
-                        ? Sheets.translucentBlockSheet() : Sheets.cutoutBlockSheet();
+                        ? Sheets.translucentBlockItemSheet() : Sheets.cutoutBlockItemSheet();
                 int[] tints = katamariIO$resolveTints(blockColors, blockState, tintLevel, blockTintPos);
                 nodeCollector.submitBlockModel(poseStack, blockRenderType, modelParts, tints,
                         packedLight, packedOverlay, outlineColor);
