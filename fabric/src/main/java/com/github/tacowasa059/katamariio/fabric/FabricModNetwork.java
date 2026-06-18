@@ -22,8 +22,8 @@ public class FabricModNetwork implements ModNetwork.NetworkHandler {
 
     @Override
     public void register() {
-        PayloadTypeRegistry.playC2S().register(REMOVE_BLOCK_ID, RemoveBlockPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(S2C_PLAYER_ID, S2CPlayerPayload.CODEC);
+        PayloadTypeRegistry.serverboundPlay().register(REMOVE_BLOCK_ID, RemoveBlockPayload.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(S2C_PLAYER_ID, S2CPlayerPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(REMOVE_BLOCK_ID, (payload, context) ->
                 payload.toPacket().handle(context.player()));
     }

@@ -9,7 +9,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.fabric.api.object.builder.v1.entity.FabricTrackedDataRegistry;
+import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityDataRegistry;
 import net.minecraft.resources.Identifier;
 
 public class KatamariIOFabric implements ModInitializer {
@@ -18,9 +18,9 @@ public class KatamariIOFabric implements ModInitializer {
         ModNetwork.bootstrap(new FabricModNetwork());
         // Fabric forbids registering custom tracked data handlers through the vanilla
         // EntityDataSerializers registry (it can desync), so register them via the Fabric API instead.
-        FabricTrackedDataRegistry.register(Identifier.fromNamespaceAndPath(KatamariIO.MODID, "vec3_list"), ModDataSerializers.VEC3_LIST);
-        FabricTrackedDataRegistry.register(Identifier.fromNamespaceAndPath(KatamariIO.MODID, "quaternion_list"), ModDataSerializers.QUATERNION_LIST);
-        FabricTrackedDataRegistry.register(Identifier.fromNamespaceAndPath(KatamariIO.MODID, "block_list"), ModDataSerializers.BLOCK_LIST);
+        FabricEntityDataRegistry.register(Identifier.fromNamespaceAndPath(KatamariIO.MODID, "vec3_list"), ModDataSerializers.VEC3_LIST);
+        FabricEntityDataRegistry.register(Identifier.fromNamespaceAndPath(KatamariIO.MODID, "quaternion_list"), ModDataSerializers.QUATERNION_LIST);
+        FabricEntityDataRegistry.register(Identifier.fromNamespaceAndPath(KatamariIO.MODID, "block_list"), ModDataSerializers.BLOCK_LIST);
         KatamariIO.init();
 
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->

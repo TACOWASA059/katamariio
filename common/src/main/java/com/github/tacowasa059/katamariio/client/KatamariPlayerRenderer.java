@@ -6,14 +6,26 @@ import com.github.tacowasa059.katamariio.common.utils.QuaternionUtils;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.color.block.BlockColors;
+import net.minecraft.client.color.block.BlockTintSource;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import net.minecraft.client.renderer.block.BlockStateModelSet;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.joml.AxisAngle4f;
 import org.joml.Quaternionf;
@@ -28,6 +40,7 @@ public final class KatamariPlayerRenderer {
     private static final int KATAMARI_BAKED_LON_BINS = 24;
     private static final long KATAMARI_BAKED_REBUILD_TICKS = 10L;
     private static final Map<Integer, BakedIndexCache> KATAMARI_BAKED_CACHE = new HashMap<>();
+    private static final int[] EMPTY_TINTS = new int[0];
 
     private KatamariPlayerRenderer() {
     }
@@ -72,7 +85,7 @@ public final class KatamariPlayerRenderer {
         poseStack.mulPose(new Quaternionf(new AxisAngle4f((float) Math.PI / 4, 0, 1, 0)));
         nodeCollector.submitCustomGeometry(
                 poseStack,
-                RenderTypes.entityCutoutNoCull(texture),
+                RenderTypes.entityCutout(texture),
                 (pose, consumer) -> SphereRenderer.drawTexturedSphere(pose, consumer, renderSize / 2.0f, 12, 0, 0, packedLight, true, packedOverlay)
         );
         poseStack.popPose();
@@ -101,6 +114,16 @@ public final class KatamariPlayerRenderer {
             renderIndices = getBakedIndices(player, vec3List, sharedSize);
         }
 
+        // Rendering context for the attached blocks. We submit each block's baked model directly
+        // with a fixed light value (the entity packed light, same as the ball) instead of using
+        // submitMovingBlock, which would sample the light engine at the ball's position and turn
+        // the blocks black whenever the ball is buried inside terrain.
+        BlockStateModelSet blockModelSet = minecraft.getModelManager().getBlockStateModelSet();
+        BlockColors blockColors = minecraft.getBlockColors();
+        RandomSource blockRandom = RandomSource.create();
+        BlockPos blockTintPos = player.blockPosition();
+        BlockAndTintGetter tintLevel = player.level() instanceof ClientLevel clientLevel ? clientLevel : null;
+
         for (int i : renderIndices) {
             Vec3 vec = vec3List.get(i);
             if (renderSize < KATAMARI_BAKED_RENDER_THRESHOLD && !shouldRenderByHash(vec, i, player.getId(), lodStep)) {
@@ -121,7 +144,22 @@ public final class KatamariPlayerRenderer {
             poseStack.pushPose();
             poseStack.translate(vec.x, vec.y, vec.z);
             poseStack.mulPose(blockRotation);
-            nodeCollector.submitBlock(poseStack, block.defaultBlockState(), packedLight, packedOverlay, outlineColor);
+            // Center the 1x1x1 block model on the attachment point (the model spans [0,1]^3).
+            poseStack.translate(-0.5, -0.5, -0.5);
+            BlockState blockState = block.defaultBlockState();
+            BlockStateModel blockModel = blockModelSet.get(blockState);
+            // submitBlockModel keeps references to the parts/tints (rendering is deferred), so a
+            // fresh list is required per attached block.
+            List<BlockStateModelPart> modelParts = new ArrayList<>();
+            blockRandom.setSeed(blockState.getSeed(blockTintPos));
+            blockModel.collectParts(blockRandom, modelParts);
+            if (!modelParts.isEmpty()) {
+                RenderType blockRenderType = blockModel.hasMaterialFlag(1)
+                        ? Sheets.translucentBlockSheet() : Sheets.cutoutBlockSheet();
+                int[] tints = katamariIO$resolveTints(blockColors, blockState, tintLevel, blockTintPos);
+                nodeCollector.submitBlockModel(poseStack, blockRenderType, modelParts, tints,
+                        packedLight, packedOverlay, outlineColor);
+            }
             poseStack.popPose();
 
             if (Objects.equals(player,minecraft.player)) {
@@ -216,6 +254,22 @@ public final class KatamariPlayerRenderer {
         if (lonBin < 0) lonBin = 0;
         if (lonBin >= KATAMARI_BAKED_LON_BINS) lonBin = KATAMARI_BAKED_LON_BINS - 1;
         return latBin * KATAMARI_BAKED_LON_BINS + lonBin;
+    }
+
+    private static int[] katamariIO$resolveTints(BlockColors blockColors, BlockState state,
+                                                 BlockAndTintGetter level, BlockPos pos) {
+        List<BlockTintSource> sources = blockColors.getTintSources(state);
+        if (sources.isEmpty()) {
+            return EMPTY_TINTS;
+        }
+        int[] tints = new int[sources.size()];
+        for (int i = 0; i < tints.length; i++) {
+            BlockTintSource source = sources.get(i);
+            // colorInWorld resolves biome-dependent tints (grass, foliage, water); fall back to the
+            // context-free default color when we have no level (should not normally happen).
+            tints[i] = level != null ? source.colorInWorld(state, level, pos) : source.color(state);
+        }
+        return tints;
     }
 
     private record BakedIndexCache(long builtTick, int sharedSize, List<Integer> indices) {

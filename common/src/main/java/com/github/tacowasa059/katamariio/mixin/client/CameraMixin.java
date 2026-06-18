@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 @Mixin(Camera.class)
 public class CameraMixin {
     @Redirect(
-            method = "setup",
+            method = "alignWithEntity",
             at = @At(
                     value = "INVOKE",
                     target = "Lnet/minecraft/client/Camera;getMaxZoom(F)F"
