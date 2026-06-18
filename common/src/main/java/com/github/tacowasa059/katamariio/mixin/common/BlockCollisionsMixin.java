@@ -18,6 +18,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.BooleanOp;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.EntityCollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.spongepowered.asm.mixin.Final;
@@ -50,9 +51,13 @@ public abstract class BlockCollisionsMixin<T> extends AbstractIterator<T> {
     @Shadow
     protected abstract BlockGetter getChunk(int x, int z);
 
-    @Inject(method = "<init>", at = @At("TAIL"))
-    private void onInit(CollisionGetter collisionGetter, Entity entity, AABB box, boolean onlySuffocatingBlocks,
+    @Inject(method = "<init>(Lnet/minecraft/world/level/CollisionGetter;Lnet/minecraft/world/phys/shapes/CollisionContext;Lnet/minecraft/world/phys/AABB;ZLjava/util/function/BiFunction;)V", at = @At("TAIL"))
+    private void onInit(CollisionGetter collisionGetter, CollisionContext context, AABB box, boolean onlySuffocatingBlocks,
                         BiFunction<BlockPos.MutableBlockPos, VoxelShape, T> resultProvider, CallbackInfo ci) {
+        // 1.21.11: getBlockCollisions(Entity, AABB) now converts the entity to a CollisionContext
+        // before constructing BlockCollisions, so we must recover the entity from the context here
+        // (the entity constructor is no longer used for movement collisions).
+        Entity entity = context instanceof EntityCollisionContext entityContext ? entityContext.getEntity() : null;
         katamariIO$entity = entity;
 
         if (entity instanceof Player player && ((ICustomPlayerData) player).katamariIO$getFlag()) {
@@ -176,7 +181,7 @@ public abstract class BlockCollisionsMixin<T> extends AbstractIterator<T> {
         if (aabb.minY < player.position().y) {
             return true;
         }
-        if (closest.isPresent() && closest.get().distanceTo(center) <= radius && player.level().isClientSide) {
+        if (closest.isPresent() && closest.get().distanceTo(center) <= radius && player.level().isClientSide()) {
             NeighboringBlockUtils.processNeighboring(player, new BlockPos(x, y, z));
         }
         return false;

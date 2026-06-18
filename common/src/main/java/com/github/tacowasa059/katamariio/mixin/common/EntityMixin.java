@@ -3,6 +3,7 @@ package com.github.tacowasa059.katamariio.mixin.common;
 import com.github.tacowasa059.katamariio.common.accessors.ICustomPlayerData;
 import com.github.tacowasa059.katamariio.common.utils.QuaternionUtils;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.InsideBlockEffectApplier;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -14,6 +15,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.util.List;
 
 @Mixin(Entity.class)
 public abstract class EntityMixin {
@@ -28,8 +31,8 @@ public abstract class EntityMixin {
         }
     }
 
-    @Inject(method = "checkInsideBlocks", at = @At("HEAD"), cancellable = true)
-    public void checkInsideBlocks(CallbackInfo ci) {
+    @Inject(method = "checkInsideBlocks(Ljava/util/List;Lnet/minecraft/world/entity/InsideBlockEffectApplier$StepBasedCollector;)V", at = @At("HEAD"), cancellable = true)
+    public void checkInsideBlocks(List<Object> movements, InsideBlockEffectApplier.StepBasedCollector stepBasedCollector, CallbackInfo ci) {
         Entity entity = (Entity) (Object) this;
         if (entity instanceof Player player && ((ICustomPlayerData) player).katamariIO$getFlag()) {
             ci.cancel();
@@ -47,7 +50,7 @@ public abstract class EntityMixin {
     @Unique
     private void katamariIO$updateQuaternion(Player player) {
         Level level = player.level();
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             return;
         }
         if (player.getVehicle() != null) {

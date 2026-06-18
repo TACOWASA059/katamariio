@@ -4,6 +4,7 @@
   "package": "com.github.tacowasa059.katamariio.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "neoforge.CommonHooksMixin",
     "neoforge.NeoForgeLivingEntityTravelMixin"
   ],
   "client": [],

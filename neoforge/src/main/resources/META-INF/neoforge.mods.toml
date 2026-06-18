@@ -1,15 +1,15 @@
 modLoader = "javafml"
-loaderVersion = "[4,)"
-license = "MIT"
+loaderVersion = "${neoforge_loader_version_range}"
+license = "${license}"
 
 [[mods]]
-modId = "katamariio"
-version = "1.0.1"
-displayName = "KatamariIO"
+modId = "${mod_id}"
+version = "${version}"
+displayName = "${mod_name}"
 logoFile = "icon.png"
-credits = ""
-authors = "TACOWASA059"
-description = ""
+credits = "${credits}"
+authors = "${mod_author}"
+description = "${description}"
 
 [[mixins]]
 config = "katamariio.mixins.json"
@@ -17,16 +17,16 @@ config = "katamariio.mixins.json"
 [[mixins]]
 config = "katamariio.neoforge.mixins.json"
 
-[[dependencies.katamariio]]
+[[dependencies.${mod_id}]]
 modId = "neoforge"
 type = "required"
-versionRange = "[21.1.80,)"
+versionRange = "[${neoforge_version},)"
 ordering = "NONE"
 side = "BOTH"
 
-[[dependencies.katamariio]]
+[[dependencies.${mod_id}]]
 modId = "minecraft"
 type = "required"
-versionRange = "[1.21.1, 1.22)"
+versionRange = "${minecraft_version_range}"
 ordering = "NONE"
 side = "BOTH"

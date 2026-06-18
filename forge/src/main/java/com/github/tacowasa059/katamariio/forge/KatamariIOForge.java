@@ -5,32 +5,32 @@ import com.github.tacowasa059.katamariio.common.commands.KatamariCommands;
 import com.github.tacowasa059.katamariio.common.event.PlayerRespawnEventListener;
 import com.github.tacowasa059.katamariio.common.networks.ModNetwork;
 import com.github.tacowasa059.katamariio.common.serializers.ModDataSerializers;
-import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 @Mod(KatamariIO.MODID)
+@Mod.EventBusSubscriber(modid = KatamariIO.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class KatamariIOForge {
     public KatamariIOForge() {
         ModNetwork.bootstrap(new ForgeModNetwork());
         ModDataSerializers.registerVanilla();
         KatamariIO.init();
-
-        MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
-        MinecraftForge.EVENT_BUS.addListener(this::onPlayerClone);
-        MinecraftForge.EVENT_BUS.addListener(this::onPlayerLogin);
     }
 
-    private void onRegisterCommands(RegisterCommandsEvent event) {
+    @SubscribeEvent
+    private static void onRegisterCommands(RegisterCommandsEvent event) {
         KatamariCommands.register(event.getDispatcher());
     }
 
-    private void onPlayerClone(PlayerEvent.Clone event) {
+    @SubscribeEvent
+    private static void onPlayerClone(PlayerEvent.Clone event) {
         PlayerRespawnEventListener.onPlayerClone(event.getOriginal(), event.getEntity());
     }
 
-    private void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
+    @SubscribeEvent
+    private static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
             PlayerRespawnEventListener.onPlayerLogin(player);
         }

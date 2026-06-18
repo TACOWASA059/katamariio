@@ -1,5 +1,7 @@
 .gradle
 .idea
+.vscode
+.claude
 run
 runs
 run-data

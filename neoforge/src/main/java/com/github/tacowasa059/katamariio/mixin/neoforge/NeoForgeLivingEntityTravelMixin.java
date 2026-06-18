@@ -1,29 +1,23 @@
 package com.github.tacowasa059.katamariio.mixin.neoforge;
 
 import com.github.tacowasa059.katamariio.common.KatamariTravel;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 @Mixin(LivingEntity.class)
-public class NeoForgeLivingEntityTravelMixin {
-    @Inject(method = "travel", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;setDeltaMovement(DDD)V", ordinal = 2),
-            locals = LocalCapture.CAPTURE_FAILSOFT, cancellable = true)
-    private void injectCustomMotion(Vec3 travelVector, CallbackInfo ci, double d0, boolean flag,
-                                    FluidState fluidstate, BlockPos blockpos, float f2, float f3, Vec3 vec35, double d2) {
-        KatamariTravel.applyCustomMotion((LivingEntity) (Object) this, vec35, ci);
-    }
-
-    @Inject(method = "travel", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;setDeltaMovement(DDD)V", ordinal = 3),
-            locals = LocalCapture.CAPTURE_FAILSOFT, cancellable = true)
-    private void injectCustomMotion2(Vec3 travelVector, CallbackInfo ci, double d0, boolean flag,
-                                     FluidState fluidstate, BlockPos blockpos, float f2, float f3, Vec3 vec35, double d2) {
-        KatamariTravel.applyCustomMotion((LivingEntity) (Object) this, vec35, ci);
+public abstract class NeoForgeLivingEntityTravelMixin {
+    @Inject(method = "travelInAir", at = @At("HEAD"), cancellable = true)
+    private void katamariio$travelInAir(Vec3 travelVector, CallbackInfo ci) {
+        LivingEntity entity = (LivingEntity) (Object) this;
+        double acceleration = entity.onGround() ? entity.getSpeed() : 0.02D;
+        entity.moveRelative((float) acceleration, travelVector);
+        Vec3 movement = entity.getDeltaMovement();
+        if (KatamariTravel.applyCustomMotion(entity, movement, false, 0.08D, 0.98F)) {
+            ci.cancel();
+        }
     }
 }

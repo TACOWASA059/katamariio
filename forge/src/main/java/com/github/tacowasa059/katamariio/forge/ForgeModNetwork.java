@@ -4,7 +4,7 @@ import com.github.tacowasa059.katamariio.KatamariIO;
 import com.github.tacowasa059.katamariio.common.networks.ModNetwork;
 import com.github.tacowasa059.katamariio.common.networks.RemoveBlockPacket;
 import com.github.tacowasa059.katamariio.common.networks.S2CPlayerPacket;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
@@ -17,7 +17,7 @@ import net.minecraftforge.network.SimpleChannel;
 public class ForgeModNetwork implements ModNetwork.NetworkHandler {
     private static final int PROTOCOL_VERSION = 1;
     private static final SimpleChannel CHANNEL = ChannelBuilder
-            .named(ResourceLocation.fromNamespaceAndPath(KatamariIO.MODID, "main"))
+            .named(Identifier.fromNamespaceAndPath(KatamariIO.MODID, "main"))
             .networkProtocolVersion(PROTOCOL_VERSION)
             .simpleChannel();
 

@@ -9,16 +9,16 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 
 public class FabricModNetwork implements ModNetwork.NetworkHandler {
     static final CustomPacketPayload.Type<RemoveBlockPayload> REMOVE_BLOCK_ID =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(KatamariIO.MODID, "remove_block"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(KatamariIO.MODID, "remove_block"));
     static final CustomPacketPayload.Type<S2CPlayerPayload> S2C_PLAYER_ID =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(KatamariIO.MODID, "player_sync"));
+            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(KatamariIO.MODID, "player_sync"));
 
     @Override
     public void register() {

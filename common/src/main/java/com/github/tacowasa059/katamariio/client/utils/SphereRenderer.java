@@ -2,31 +2,21 @@ package com.github.tacowasa059.katamariio.client.utils;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
-import org.joml.AxisAngle4f;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
-import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 public class SphereRenderer {
-    public static <T extends MultiBufferSource> void drawTexturedSphere(PoseStack poseStack, T buffer,
-                                                                        ResourceLocation texture, float radius, int segments, float x, float z, int packedLight, boolean lightmap2, int overlay) {
-        Matrix4f positionMatrix = poseStack.last().pose();
-        Matrix3f normalMatrix = poseStack.last().normal();
-        poseStack.mulPose(new Quaternionf(new AxisAngle4f((float) Math.PI / 4, 0, 1, 0)));
-
-        VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(texture));
+    public static void drawTexturedSphere(PoseStack.Pose pose, VertexConsumer vertexConsumer,
+                                          float radius, int segments, float x, float z, int packedLight, boolean lightmap2, int overlay) {
+        Matrix4f positionMatrix = pose.pose();
+        Matrix3f normalMatrix = pose.normal();
         addBottomSphere(radius, segments, x, z, vertexConsumer, positionMatrix, normalMatrix, 0.1875F, false, packedLight, lightmap2, overlay);
         addBottomSphere(radius * 1.01F, segments, x, z, vertexConsumer, positionMatrix, normalMatrix, 0.6875F, false, packedLight, lightmap2, overlay);
         addBottomSphere(radius, segments, x, z, vertexConsumer, positionMatrix, normalMatrix, 0.3125F, true, packedLight, lightmap2, overlay);
         addBottomSphere(radius * 1.01F, segments, x, z, vertexConsumer, positionMatrix, normalMatrix, 0.8125F, true, packedLight, lightmap2, overlay);
         addSideSphere(radius, segments, x, z, vertexConsumer, positionMatrix, normalMatrix, false, packedLight, lightmap2, overlay);
         addSideSphere(radius * 1.01F, segments, x, z, vertexConsumer, positionMatrix, normalMatrix, true, packedLight, lightmap2, overlay);
-
-        poseStack.mulPose(new Quaternionf(new AxisAngle4f(-(float) Math.PI / 4, 0, 1, 0)));
     }
 
     private static void addBottomSphere(float radius, int segments, float x, float z, VertexConsumer vertexBuilder,
@@ -165,7 +155,10 @@ public class SphereRenderer {
     }
 
     private static Vector3f transformNormal(Matrix3f normalMatrix, float x, float y, float z) {
-        return normalMatrix.transform(new Vector3f(x, y, z)).normalize();
+        // Negate so the diffuse shading lights the ball from above. Under the 1.21.11 submit
+        // pipeline the outward sphere normals end up shaded inverted (bottom bright / top dark),
+        // so flipping them restores the expected top-lit appearance.
+        return normalMatrix.transform(new Vector3f(-x, -y, -z)).normalize();
     }
 
     private static float getSquareZ(float x1, float z1, float cubeSize) {

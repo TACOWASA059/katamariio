@@ -5,14 +5,14 @@ import com.github.tacowasa059.katamariio.common.networks.S2CPlayerPacket;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 
 public record S2CPlayerPayload(float collisionSize, float renderSize, boolean flag, float restitution,
                                Quaternionf quaternion, Vec3 currentPosition) implements CustomPacketPayload {
     public static final Type<S2CPlayerPayload> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(KatamariIO.MODID, "player_sync"));
+            new Type<>(Identifier.fromNamespaceAndPath(KatamariIO.MODID, "player_sync"));
     public static final StreamCodec<RegistryFriendlyByteBuf, S2CPlayerPayload> STREAM_CODEC = StreamCodec.of((buf, payload) -> {
         buf.writeFloat(payload.collisionSize);
         buf.writeFloat(payload.renderSize);

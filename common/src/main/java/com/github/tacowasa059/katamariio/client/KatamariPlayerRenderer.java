@@ -2,29 +2,24 @@ package com.github.tacowasa059.katamariio.client;
 
 import com.github.tacowasa059.katamariio.client.utils.SphereRenderer;
 import com.github.tacowasa059.katamariio.common.accessors.ICustomPlayerData;
-import com.github.tacowasa059.katamariio.common.accessors.IPlayerRendererAccessor;
 import com.github.tacowasa059.katamariio.common.utils.QuaternionUtils;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
-import net.minecraft.client.player.RemotePlayer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.entity.EntityRenderer;
-import net.minecraft.client.renderer.entity.player.PlayerRenderer;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
+import org.joml.AxisAngle4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public final class KatamariPlayerRenderer {
     public static double MAX_SIZE = 0;
@@ -37,8 +32,8 @@ public final class KatamariPlayerRenderer {
     private KatamariPlayerRenderer() {
     }
 
-    public static boolean render(PlayerRenderer renderer, AbstractClientPlayer player, float partialTicks, PoseStack poseStack,
-                                 MultiBufferSource buffer, int packedLight) {
+    public static boolean render(AbstractClientPlayer player, float partialTicks, PoseStack poseStack,
+                                 SubmitNodeCollector nodeCollector, int packedLight, int outlineColor) {
         ICustomPlayerData playerData = (ICustomPlayerData) player;
         if (!playerData.katamariIO$getFlag()) {
             return false;
@@ -46,11 +41,15 @@ public final class KatamariPlayerRenderer {
         if (player.isInvisible()) {
             return true;
         }
+        Minecraft minecraft = Minecraft.getInstance();
+        if (Objects.equals(player,minecraft.player) && minecraft.options.getCameraType() == CameraType.FIRST_PERSON) {
+            return true;
+        }
 
         float renderSize = playerData.katamariIO$getRenderSize();
         float collisionSize = playerData.katamariIO$getSize();
         Quaternionf quaternion = playerData.katamariIO$getInterpolatedQuaternion(partialTicks);
-        ResourceLocation texture = player.getSkin().texture();
+        Identifier texture = player.getSkin().body().texturePath();
 
         poseStack.pushPose();
         poseStack.translate(0, collisionSize / 2.0, 0);
@@ -64,9 +63,18 @@ public final class KatamariPlayerRenderer {
         if (player.hurtTime > 0 || player.deathTime > 0) {
             overlay = OverlayTexture.pack(OverlayTexture.u(partialTicks), OverlayTexture.v(true));
         }
+        final int packedOverlay = overlay;
 
         poseStack.pushPose();
-        SphereRenderer.drawTexturedSphere(poseStack, buffer, texture, renderSize / 2.0f, 12, 0, 0, packedLight, true, overlay);
+        // The sphere UV layout is offset by 45 degrees (see SphereRenderer#getSquareX/Z), so the
+        // ball must be rotated to match. submitCustomGeometry snapshots the pose, so apply it here
+        // rather than inside SphereRenderer (which now only receives a Pose snapshot).
+        poseStack.mulPose(new Quaternionf(new AxisAngle4f((float) Math.PI / 4, 0, 1, 0)));
+        nodeCollector.submitCustomGeometry(
+                poseStack,
+                RenderTypes.entityCutoutNoCull(texture),
+                (pose, consumer) -> SphereRenderer.drawTexturedSphere(pose, consumer, renderSize / 2.0f, 12, 0, 0, packedLight, true, packedOverlay)
+        );
         poseStack.popPose();
 
         double tmpSize = renderSize;
@@ -74,9 +82,9 @@ public final class KatamariPlayerRenderer {
         List<Block> blockList = playerData.katamariIO$getSphericalPlayerBlocks();
         List<Quaternionf> quaternionfList = playerData.katamariIO$getSphericalPlayerQuaternions();
         int lodStep = getLodStepForPlayer(player);
-        Entity camera = Minecraft.getInstance().getCameraEntity();
+        Entity camera = minecraft.getCameraEntity();
         Entity cameraEntity = camera == null ? player : camera;
-        CameraType cameraType = Minecraft.getInstance().options.getCameraType();
+        CameraType cameraType = minecraft.options.getCameraType();
         Vec3 viewDir = cameraEntity.getViewVector(partialTicks);
         Vector3f viewDirLocal = new Vector3f((float) viewDir.x, (float) viewDir.y, (float) viewDir.z);
         Quaternionf inverseBallRotation = new Quaternionf(quaternion).invert();
@@ -113,27 +121,19 @@ public final class KatamariPlayerRenderer {
             poseStack.pushPose();
             poseStack.translate(vec.x, vec.y, vec.z);
             poseStack.mulPose(blockRotation);
-            Minecraft.getInstance().getBlockRenderer().renderSingleBlock(block.defaultBlockState(), poseStack, buffer, packedLight, overlay);
+            nodeCollector.submitBlock(poseStack, block.defaultBlockState(), packedLight, packedOverlay, outlineColor);
             poseStack.popPose();
 
-            if (player.equals(Minecraft.getInstance().player)) {
+            if (Objects.equals(player,minecraft.player)) {
                 tmpSize = Math.max(tmpSize, vec.length() * 2);
             }
         }
 
-        if (player.equals(Minecraft.getInstance().player)) {
+        if (Objects.equals(player,minecraft.player)) {
             MAX_SIZE = tmpSize;
         }
 
         poseStack.popPose();
-
-        EntityRenderer<?> entityRenderer = Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(player);
-        if (player instanceof RemotePlayer && entityRenderer instanceof IPlayerRendererAccessor accessor) {
-            if (accessor.katamariIO$shouldShowName(player)) {
-                accessor.katamariIO$callRenderName(player, player.getDisplayName(), poseStack, buffer, packedLight, partialTicks);
-            }
-        }
-
         return true;
     }
 
@@ -209,7 +209,7 @@ public final class KatamariPlayerRenderer {
         double nx = vec.x / len;
         double ny = vec.y / len;
         double nz = vec.z / len;
-        int latBin = (int) ((Math.asin(Math.max(-1.0, Math.min(1.0, ny))) + (Math.PI / 2.0)) / Math.PI * KATAMARI_BAKED_LAT_BINS);
+        int latBin = (int) ((Math.asin(Math.clamp(ny, -1.0, 1.0)) + (Math.PI / 2.0)) / Math.PI * KATAMARI_BAKED_LAT_BINS);
         int lonBin = (int) ((Math.atan2(nz, nx) + Math.PI) / (Math.PI * 2.0) * KATAMARI_BAKED_LON_BINS);
         if (latBin < 0) latBin = 0;
         if (latBin >= KATAMARI_BAKED_LAT_BINS) latBin = KATAMARI_BAKED_LAT_BINS - 1;

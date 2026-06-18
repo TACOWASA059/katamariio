@@ -8,20 +8,24 @@ import com.github.tacowasa059.katamariio.common.serializers.ModDataSerializers;
 import com.github.tacowasa059.katamariio.common.utils.QuaternionUtils;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
+import org.joml.Quaternionfc;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -43,9 +47,9 @@ public abstract class PlayerMixin implements ICustomPlayerData {
     @Unique
     private static final EntityDataAccessor<Float> RESTITUTION_COEFFICIENT = SynchedEntityData.defineId(Player.class, EntityDataSerializers.FLOAT);
     @Unique
-    private static final EntityDataAccessor<CompoundTag> sphericalPlayerMod$QUATERNION = SynchedEntityData.defineId(Player.class, EntityDataSerializers.COMPOUND_TAG);
+    private static final EntityDataAccessor<Quaternionfc> sphericalPlayerMod$QUATERNION = SynchedEntityData.defineId(Player.class, EntityDataSerializers.QUATERNION);
     @Unique
-    private static final EntityDataAccessor<CompoundTag> CURRENT_POSITION = SynchedEntityData.defineId(Player.class, EntityDataSerializers.COMPOUND_TAG);
+    private static final EntityDataAccessor<Vector3fc> CURRENT_POSITION = SynchedEntityData.defineId(Player.class, EntityDataSerializers.VECTOR3);
     @Unique
     private static final EntityDataAccessor<List<Vec3>> SPHERICAL_PLAYER_POSITION_LIST = SynchedEntityData.defineId(Player.class, ModDataSerializers.VEC3_LIST);
     @Unique
@@ -85,7 +89,7 @@ public abstract class PlayerMixin implements ICustomPlayerData {
         }
 
         Player player = (Player) (Object) this;
-        if (player.level().isClientSide) {
+        if (player.level().isClientSide()) {
             sphericalPlayerMod$prevQuaternion = katamariIO$getValidQuaternion(new Quaternionf(sphericalPlayerMod$quaternion));
             Quaternionf quaternion = QuaternionUtils.getUpdatedQuaternion(player.position(),
                     katamariIO$getCurrentPosition(), (ICustomPlayerData) player);
@@ -112,19 +116,10 @@ public abstract class PlayerMixin implements ICustomPlayerData {
         builder.define(sphericalPlayerMod$SIZE, KatamariIO.DEFAULT_BALL_SIZE);
         builder.define(sphericalPlayerMod$RENDER_SIZE, KatamariIO.DEFAULT_BALL_SIZE);
         builder.define(sphericalPlayerMod$FLAG, true);
-        CompoundTag quaternionTag = new CompoundTag();
-        quaternionTag.putFloat("x", 0f);
-        quaternionTag.putFloat("y", 0f);
-        quaternionTag.putFloat("z", 0f);
-        quaternionTag.putFloat("w", 1f);
-        builder.define(sphericalPlayerMod$QUATERNION, quaternionTag);
+        builder.define(sphericalPlayerMod$QUATERNION, new Quaternionf(0, 0, 0, 1));
         builder.define(RESTITUTION_COEFFICIENT, 0.55f);
 
-        CompoundTag positionTag = new CompoundTag();
-        positionTag.putFloat("x", 0);
-        positionTag.putFloat("y", 0);
-        positionTag.putFloat("z", 0);
-        builder.define(CURRENT_POSITION, positionTag);
+        builder.define(CURRENT_POSITION, new Vector3f(0, 0, 0));
 
         builder.define(SPHERICAL_PLAYER_POSITION_LIST, new ArrayList<>());
         builder.define(SPHERICAL_PLAYER_QUATERNION_LIST, new ArrayList<>());
@@ -133,27 +128,38 @@ public abstract class PlayerMixin implements ICustomPlayerData {
     }
 
     @Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
-    private void writeAdditional(CompoundTag compound, CallbackInfo ci) {
+    private void writeAdditional(ValueOutput output, CallbackInfo ci) {
         Player entity = (Player) (Object) this;
         SynchedEntityData dataManager = entity.getEntityData();
-        compound.putFloat("SPM_Size", dataManager.get(sphericalPlayerMod$SIZE));
-        compound.putFloat("SPM_RenderSize", dataManager.get(sphericalPlayerMod$RENDER_SIZE));
-        compound.putBoolean("SPM_isBall", dataManager.get(sphericalPlayerMod$FLAG));
-        compound.put("SPM_Quaternion", dataManager.get(sphericalPlayerMod$QUATERNION));
-        compound.putFloat("SPM_RESTITUTION", dataManager.get(RESTITUTION_COEFFICIENT));
-        compound.put("SPM_POSITION", dataManager.get(CURRENT_POSITION));
-        compound.putInt("SPM_BlockCount", dataManager.get(SPHERICAL_PLAYER_BLOCK_COUNT));
+        output.putFloat("SPM_Size", dataManager.get(sphericalPlayerMod$SIZE));
+        output.putFloat("SPM_RenderSize", dataManager.get(sphericalPlayerMod$RENDER_SIZE));
+        output.putBoolean("SPM_isBall", dataManager.get(sphericalPlayerMod$FLAG));
+        Quaternionfc quaternion = dataManager.get(sphericalPlayerMod$QUATERNION);
+        CompoundTag quaternionTag = new CompoundTag();
+        quaternionTag.putFloat("x", quaternion.x());
+        quaternionTag.putFloat("y", quaternion.y());
+        quaternionTag.putFloat("z", quaternion.z());
+        quaternionTag.putFloat("w", quaternion.w());
+        output.store("SPM_Quaternion", CompoundTag.CODEC, quaternionTag);
+        output.putFloat("SPM_RESTITUTION", dataManager.get(RESTITUTION_COEFFICIENT));
+        Vector3fc currentPosition = dataManager.get(CURRENT_POSITION);
+        CompoundTag positionTag = new CompoundTag();
+        positionTag.putFloat("x", currentPosition.x());
+        positionTag.putFloat("y", currentPosition.y());
+        positionTag.putFloat("z", currentPosition.z());
+        output.store("SPM_POSITION", CompoundTag.CODEC, positionTag);
+        output.putInt("SPM_BlockCount", dataManager.get(SPHERICAL_PLAYER_BLOCK_COUNT));
 
         List<Block> blocks = dataManager.get(SPHERICAL_PLAYER_BLOCK_LIST);
         List<Vec3> positions = dataManager.get(SPHERICAL_PLAYER_POSITION_LIST);
         List<Quaternionf> quaternions = dataManager.get(SPHERICAL_PLAYER_QUATERNION_LIST);
         int size = Math.min(blocks.size(), Math.min(positions.size(), quaternions.size()));
-        ListTag attachedList = new ListTag();
+        ValueOutput.TypedOutputList<CompoundTag> attachedList = output.list(SPM_ATTACHED_BLOCKS, CompoundTag.CODEC);
         for (int i = 0; i < size; i++) {
             Block block = blocks.get(i);
             Vec3 pos = positions.get(i);
             Quaternionf quat = quaternions.get(i);
-            ResourceLocation key = BuiltInRegistries.BLOCK.getKey(block);
+            Identifier key = BuiltInRegistries.BLOCK.getKey(block);
             if (key == null) {
                 continue;
             }
@@ -169,61 +175,56 @@ public abstract class PlayerMixin implements ICustomPlayerData {
             entry.putFloat("qw", quat.w);
             attachedList.add(entry);
         }
-        compound.put(SPM_ATTACHED_BLOCKS, attachedList);
     }
 
     @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
-    private void readAdditional(CompoundTag compound, CallbackInfo ci) {
+    private void readAdditional(ValueInput input, CallbackInfo ci) {
         Player entity = (Player) (Object) this;
         SynchedEntityData dataManager = entity.getEntityData();
 
-        if (compound.contains("SPM_Size")) {
-            katamariIO$setSize(compound.getFloat("SPM_Size"));
-        }
-        if (compound.contains("SPM_RenderSize")) {
-            katamariIO$setRenderSize(compound.getFloat("SPM_RenderSize"));
-        } else if (compound.contains("SPM_Size")) {
-            katamariIO$setRenderSize(compound.getFloat("SPM_Size"));
-        }
-        if (compound.contains("SPM_RESTITUTION")) {
-            katamariIO$setRestitutionCoefficient(compound.getFloat("SPM_RESTITUTION"));
-        }
-        if (compound.contains("SPM_isBall")) {
-            katamariIO$setFlag(compound.getBoolean("SPM_isBall"));
-        }
-        if (compound.contains("SPM_Quaternion")) {
-            dataManager.set(sphericalPlayerMod$QUATERNION, compound.getCompound("SPM_Quaternion"));
-        }
-        if (compound.contains("SPM_POSITION")) {
-            dataManager.set(CURRENT_POSITION, compound.getCompound("SPM_POSITION"));
-        }
-        if (compound.contains("SPM_BlockCount")) {
-            dataManager.set(SPHERICAL_PLAYER_BLOCK_COUNT, compound.getInt("SPM_BlockCount"));
-        } else {
-            dataManager.set(SPHERICAL_PLAYER_BLOCK_COUNT, dataManager.get(SPHERICAL_PLAYER_BLOCK_LIST).size());
-        }
+        katamariIO$setSize(input.getFloatOr("SPM_Size", KatamariIO.DEFAULT_BALL_SIZE));
+        katamariIO$setRenderSize(input.getFloatOr("SPM_RenderSize", input.getFloatOr("SPM_Size", KatamariIO.DEFAULT_BALL_SIZE)));
+        katamariIO$setRestitutionCoefficient(input.getFloatOr("SPM_RESTITUTION", 0.55f));
+        katamariIO$setFlag(input.getBooleanOr("SPM_isBall", true));
 
-        if (compound.contains(SPM_ATTACHED_BLOCKS, Tag.TAG_LIST)) {
-            ListTag attachedList = compound.getList(SPM_ATTACHED_BLOCKS, Tag.TAG_COMPOUND);
+        input.read("SPM_Quaternion", CompoundTag.CODEC).ifPresent(quaternionTag ->
+            dataManager.set(sphericalPlayerMod$QUATERNION, new Quaternionf(
+                    quaternionTag.getFloatOr("x", 0f),
+                    quaternionTag.getFloatOr("y", 0f),
+                    quaternionTag.getFloatOr("z", 0f),
+                    quaternionTag.getFloatOr("w", 1f)
+            ))
+        );
+        input.read("SPM_POSITION", CompoundTag.CODEC).ifPresent(positionTag ->
+            dataManager.set(CURRENT_POSITION, new Vector3f(
+                    positionTag.getFloatOr("x", 0f),
+                    positionTag.getFloatOr("y", 0f),
+                    positionTag.getFloatOr("z", 0f)
+            ))
+        );
+        dataManager.set(SPHERICAL_PLAYER_BLOCK_COUNT, input.getIntOr("SPM_BlockCount", dataManager.get(SPHERICAL_PLAYER_BLOCK_LIST).size()));
+
+        input.list(SPM_ATTACHED_BLOCKS, CompoundTag.CODEC).ifPresent(attachedList -> {
             List<Block> blocks = new ArrayList<>();
             List<Vec3> positions = new ArrayList<>();
             List<Quaternionf> quaternions = new ArrayList<>();
 
-            for (int i = 0; i < attachedList.size(); i++) {
-                CompoundTag entry = attachedList.getCompound(i);
-                ResourceLocation key = ResourceLocation.tryParse(entry.getString("block"));
+            for (CompoundTag entry : attachedList) {
+                Identifier key = Identifier.tryParse(entry.getStringOr("block", ""));
                 if (key == null || !BuiltInRegistries.BLOCK.containsKey(key)) {
                     continue;
                 }
-                Block block = BuiltInRegistries.BLOCK.get(key);
-                blocks.add(block);
-                positions.add(new Vec3(entry.getDouble("x"), entry.getDouble("y"), entry.getDouble("z")));
-                quaternions.add(new Quaternionf(
-                        entry.getFloat("qx"),
-                        entry.getFloat("qy"),
-                        entry.getFloat("qz"),
-                        entry.getFloat("qw")
-                ));
+                Block block = BuiltInRegistries.BLOCK.getValue(key);
+                if (block != null) {
+                    blocks.add(block);
+                    positions.add(new Vec3(entry.getDoubleOr("x", 0.0), entry.getDoubleOr("y", 0.0), entry.getDoubleOr("z", 0.0)));
+                    quaternions.add(new Quaternionf(
+                            entry.getFloatOr("qx", 0f),
+                            entry.getFloatOr("qy", 0f),
+                            entry.getFloatOr("qz", 0f),
+                            entry.getFloatOr("qw", 1f)
+                    ));
+                }
             }
 
             dataManager.set(SPHERICAL_PLAYER_BLOCK_LIST, blocks, true);
@@ -231,7 +232,7 @@ public abstract class PlayerMixin implements ICustomPlayerData {
             dataManager.set(SPHERICAL_PLAYER_QUATERNION_LIST, quaternions, true);
             dataManager.set(SPHERICAL_PLAYER_BLOCK_COUNT, blocks.size());
             katamariIO$binRadiiDirty = true;
-        }
+        });
     }
 
     @Override
@@ -304,23 +305,12 @@ public abstract class PlayerMixin implements ICustomPlayerData {
     @Override
     public void katamariIO$setQuaternion(Quaternionf quaternion) {
         Player entity = (Player) (Object) this;
-        CompoundTag nbt = new CompoundTag();
-        nbt.putFloat("x", quaternion.x());
-        nbt.putFloat("y", quaternion.y());
-        nbt.putFloat("z", quaternion.z());
-        nbt.putFloat("w", quaternion.w());
-        entity.getEntityData().set(sphericalPlayerMod$QUATERNION, nbt);
+        entity.getEntityData().set(sphericalPlayerMod$QUATERNION, new Quaternionf(quaternion));
     }
 
     @Override
     public Quaternionf katamariIO$getQuaternion() {
-        CompoundTag quaternionNbt = ((Player) (Object) this).getEntityData().get(sphericalPlayerMod$QUATERNION);
-        return katamariIO$getValidQuaternion(new Quaternionf(
-                quaternionNbt.getFloat("x"),
-                quaternionNbt.getFloat("y"),
-                quaternionNbt.getFloat("z"),
-                quaternionNbt.getFloat("w")
-        ));
+        return katamariIO$getValidQuaternion(new Quaternionf(((Player) (Object) this).getEntityData().get(sphericalPlayerMod$QUATERNION)));
     }
 
     @Unique
@@ -334,21 +324,13 @@ public abstract class PlayerMixin implements ICustomPlayerData {
     @Override
     public void katamariIO$setCurrentPosition(Vec3 pos) {
         Player entity = (Player) (Object) this;
-        CompoundTag nbt = new CompoundTag();
-        nbt.putFloat("x", (float) pos.x());
-        nbt.putFloat("y", (float) pos.y());
-        nbt.putFloat("z", (float) pos.z());
-        entity.getEntityData().set(CURRENT_POSITION, nbt);
+        entity.getEntityData().set(CURRENT_POSITION, new Vector3f((float) pos.x(), (float) pos.y(), (float) pos.z()));
     }
 
     @Override
     public Vec3 katamariIO$getCurrentPosition() {
-        CompoundTag compoundNbt = ((Player) (Object) this).getEntityData().get(CURRENT_POSITION);
-        return new Vec3(
-                compoundNbt.getFloat("x"),
-                compoundNbt.getFloat("y"),
-                compoundNbt.getFloat("z")
-        );
+        Vector3fc position = ((Player) (Object) this).getEntityData().get(CURRENT_POSITION);
+        return new Vec3(position.x(), position.y(), position.z());
     }
 
     @Inject(method = "maybeBackOffFromEdge", at = @At("HEAD"), cancellable = true)
@@ -359,10 +341,10 @@ public abstract class PlayerMixin implements ICustomPlayerData {
     }
 
     @Inject(method = "causeFallDamage", at = @At("HEAD"), cancellable = true)
-    private void katamariIO$causeFallDamage(float fallDistance, float damageMultiplier, DamageSource damageSource, CallbackInfoReturnable<Boolean> cir) {
+    private void katamariIO$causeFallDamage(double fallDistance, float damageMultiplier, DamageSource damageSource, CallbackInfoReturnable<Boolean> cir) {
         Player entity = (Player) (Object) this;
         if (katamariIO$getFlag()) {
-            KatamariMovement.bouncePlayer(entity, fallDistance, katamariIO$getRestitutionCoefficient());
+            KatamariMovement.bouncePlayer(entity, (float) fallDistance, katamariIO$getRestitutionCoefficient());
             cir.setReturnValue(false);
         }
     }

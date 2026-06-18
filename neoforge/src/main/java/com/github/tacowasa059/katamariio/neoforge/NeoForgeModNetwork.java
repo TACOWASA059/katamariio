@@ -4,6 +4,7 @@ import com.github.tacowasa059.katamariio.common.networks.ModNetwork;
 import com.github.tacowasa059.katamariio.common.networks.RemoveBlockPacket;
 import com.github.tacowasa059.katamariio.common.networks.S2CPlayerPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
@@ -25,7 +26,7 @@ public class NeoForgeModNetwork implements ModNetwork.NetworkHandler {
 
     @Override
     public void sendToServer(RemoveBlockPacket packet) {
-        PacketDistributor.sendToServer(RemoveBlockPayload.fromPacket(packet));
+        ClientPacketDistributor.sendToServer(RemoveBlockPayload.fromPacket(packet));
     }
 
     @Override

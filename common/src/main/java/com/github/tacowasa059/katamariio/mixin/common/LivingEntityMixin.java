@@ -42,11 +42,11 @@ public abstract class LivingEntityMixin extends Entity {
             return;
         }
 
-        entity.hasImpulse = true;
         Vec3 currentMotion = entity.getDeltaMovement();
         Vec3 knockbackVector = (new Vec3(ratioX, 0.0, ratioZ)).normalize().scale(strength);
         entity.setDeltaMovement(currentMotion.x / 2.0 - knockbackVector.x,
                 currentMotion.y / 2.0 + strength / 2.0 + 0.1D, currentMotion.z / 2.0 - knockbackVector.z);
+        entity.hurtMarked = true;
         ci.cancel();
     }
 

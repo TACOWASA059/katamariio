@@ -11,10 +11,10 @@
     "common.PlayerMixin"
   ],
   "client": [
+    "client.AvatarRendererMixin",
     "client.CameraMixin",
     "client.GameRendererMixin",
-    "client.KeyboardInputMixin",
-    "client.PlayerRendererMixin"
+    "client.KeyboardInputMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -9,7 +9,7 @@ public final class KatamariMovement {
     }
 
     public static void bouncePlayer(Player player, float fallDistance, float restitutionCoefficient) {
-        if (Math.abs(fallDistance) < 1f || player.level().isClientSide) {
+        if (Math.abs(fallDistance) < 1f || player.level().isClientSide()) {
             return;
         }
 
@@ -17,8 +17,8 @@ public final class KatamariMovement {
         double restoredMotionX = player.getX() - player.xOld;
         double restoredMotionZ = player.getZ() - player.zOld;
 
-        player.hasImpulse = true;
         player.setDeltaMovement(restoredMotionX, bounceVelocityY, restoredMotionZ);
+        player.hurtMarked = true;
 
         if (player instanceof ServerPlayer serverPlayer) {
             serverPlayer.connection.send(new ClientboundSetEntityMotionPacket(player));
