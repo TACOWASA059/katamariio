@@ -1,6 +1,7 @@
 package com.github.tacowasa059.katamariio.forge;
 
 import com.github.tacowasa059.katamariio.KatamariIO;
+import com.github.tacowasa059.katamariio.common.networks.S2CKatamariDeltaPacket;
 import com.github.tacowasa059.katamariio.common.networks.S2CPlayerPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
@@ -23,6 +24,10 @@ public final class ForgeClientStateSync {
             return;
         }
         packet.applyToPlayer(player);
+    }
+
+    public static void receiveDelta(S2CKatamariDeltaPacket packet) {
+        packet.apply(Minecraft.getInstance().level);
     }
 
     @SubscribeEvent

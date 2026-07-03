@@ -8,6 +8,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -94,6 +95,27 @@ public abstract class LivingEntityMixin extends Entity {
         if (entity instanceof Player player && ((ICustomPlayerData) player).katamariIO$getFlag()) {
             cir.setReturnValue(false);
             cir.cancel();
+        }
+    }
+
+    // Ball players ignore fluids, so travel() skips the water/lava branch (which applies drag and
+    // slow acceleration) and uses the normal branch where the mod's custom motion runs. This stops
+    // the katamari slowing down in water/lava.
+    @Inject(method = "isAffectedByFluids", at = @At("HEAD"), cancellable = true)
+    public void katamariIO$isAffectedByFluids(CallbackInfoReturnable<Boolean> cir) {
+        LivingEntity entity = (LivingEntity) (Object) this;
+        if (entity instanceof Player player && ((ICustomPlayerData) player).katamariIO$getFlag()) {
+            cir.setReturnValue(false);
+        }
+    }
+
+    // travel()'s water/lava branch is guarded by !canStandOnFluid(...), so making the ball "stand on"
+    // fluids skips that branch (drag + slow accel) and lets it roll over water/lava at normal speed.
+    @Inject(method = "canStandOnFluid", at = @At("HEAD"), cancellable = true)
+    public void katamariIO$canStandOnFluid(FluidState fluidState, CallbackInfoReturnable<Boolean> cir) {
+        LivingEntity entity = (LivingEntity) (Object) this;
+        if (entity instanceof Player player && ((ICustomPlayerData) player).katamariIO$getFlag()) {
+            cir.setReturnValue(true);
         }
     }
 }

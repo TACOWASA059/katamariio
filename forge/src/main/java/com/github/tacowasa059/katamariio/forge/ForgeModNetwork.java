@@ -3,6 +3,7 @@ package com.github.tacowasa059.katamariio.forge;
 import com.github.tacowasa059.katamariio.KatamariIO;
 import com.github.tacowasa059.katamariio.common.networks.ModNetwork;
 import com.github.tacowasa059.katamariio.common.networks.RemoveBlockPacket;
+import com.github.tacowasa059.katamariio.common.networks.S2CKatamariDeltaPacket;
 import com.github.tacowasa059.katamariio.common.networks.S2CPlayerPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -47,6 +48,16 @@ public class ForgeModNetwork implements ModNetwork.NetworkHandler {
                     context.setPacketHandled(true);
                 },
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(nextId++, S2CKatamariDeltaPacket.class,
+                S2CKatamariDeltaPacket::encode,
+                S2CKatamariDeltaPacket::decode,
+                (packet, contextSupplier) -> {
+                    var context = contextSupplier.get();
+                    context.enqueueWork(() ->
+                            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ForgeClientStateSync.receiveDelta(packet)));
+                    context.setPacketHandled(true);
+                },
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     @Override
@@ -57,5 +68,10 @@ public class ForgeModNetwork implements ModNetwork.NetworkHandler {
     @Override
     public void sendInitialData(ServerPlayer player, S2CPlayerPacket packet) {
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), packet);
+    }
+
+    @Override
+    public void sendBlocksDelta(ServerPlayer owner, S2CKatamariDeltaPacket packet) {
+        CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> owner), packet);
     }
 }

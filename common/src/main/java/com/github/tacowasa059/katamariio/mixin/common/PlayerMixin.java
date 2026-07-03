@@ -3,12 +3,16 @@ package com.github.tacowasa059.katamariio.mixin.common;
 import com.github.tacowasa059.katamariio.KatamariIO;
 import com.github.tacowasa059.katamariio.common.KatamariMovement;
 import com.github.tacowasa059.katamariio.common.accessors.ICustomPlayerData;
-import com.github.tacowasa059.katamariio.common.networks.S2CPlayerPacket;
+import com.github.tacowasa059.katamariio.common.data.KatamariBlocks;
+import com.github.tacowasa059.katamariio.common.networks.ModNetwork;
+import com.github.tacowasa059.katamariio.common.networks.S2CKatamariDeltaPacket;
 import com.github.tacowasa059.katamariio.common.serializers.ModDataSerializers;
 import com.github.tacowasa059.katamariio.common.utils.QuaternionUtils;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -29,8 +33,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 @Mixin(Player.class)
 public abstract class PlayerMixin implements ICustomPlayerData {
@@ -47,11 +52,7 @@ public abstract class PlayerMixin implements ICustomPlayerData {
     @Unique
     private static final EntityDataAccessor<CompoundTag> CURRENT_POSITION = SynchedEntityData.defineId(Player.class, EntityDataSerializers.COMPOUND_TAG);
     @Unique
-    private static final EntityDataAccessor<List<Vec3>> SPHERICAL_PLAYER_POSITION_LIST = SynchedEntityData.defineId(Player.class, ModDataSerializers.VEC3_LIST);
-    @Unique
-    private static final EntityDataAccessor<List<Quaternionf>> SPHERICAL_PLAYER_QUATERNION_LIST = SynchedEntityData.defineId(Player.class, ModDataSerializers.QUATERNION_LIST);
-    @Unique
-    private static final EntityDataAccessor<List<Block>> SPHERICAL_PLAYER_BLOCK_LIST = SynchedEntityData.defineId(Player.class, ModDataSerializers.BLOCK_LIST);
+    private static final EntityDataAccessor<KatamariBlocks> SPHERICAL_PLAYER_BLOCKS = SynchedEntityData.defineId(Player.class, ModDataSerializers.KATAMARI_BLOCKS);
     @Unique
     private static final EntityDataAccessor<Integer> SPHERICAL_PLAYER_BLOCK_COUNT = SynchedEntityData.defineId(Player.class, EntityDataSerializers.INT);
 
@@ -68,13 +69,31 @@ public abstract class PlayerMixin implements ICustomPlayerData {
     @Unique
     private static final float KATAMARI_BLOCK_EXTENT = 0.5f;
     @Unique
-    private static final float KATAMARI_DP_CUTOFF_OFFSET = 2.0f;
+    private static final float KATAMARI_PRUNE_MIN_RADIUS = 6.0f;
+    @Unique
+    private static final int KATAMARI_PRUNE_MIN_LAT_BINS = 12;
+    @Unique
+    private static final int KATAMARI_PRUNE_MAX_LAT_BINS = 48;
+    @Unique
+    private static final float KATAMARI_PRUNE_SHELL_THICKNESS = 0.5f;
+    @Unique
+    private static final int KATAMARI_PRUNE_ADD_INTERVAL = 32;
     @Unique
     private static final String SPM_ATTACHED_BLOCKS = "SPM_AttachedBlocks";
+    @Unique
+    private static final String SPM_ATTACHED_BLOCKS_V2 = "SPM_AttachedBlocksV2";
     @Unique
     private float[] katamariIO$binMaxRadii = null;
     @Unique
     private boolean katamariIO$binRadiiDirty = true;
+    @Unique
+    private int katamariIO$addsSincePrune = 0;
+    @Unique
+    private boolean katamariIO$blocksDirty = false;
+    @Unique
+    private static final int KATAMARI_KEYFRAME_INTERVAL = 40;
+    @Unique
+    private final KatamariBlocks katamariIO$pendingAdds = new KatamariBlocks();
 
     @Inject(method = "tick", at = @At("HEAD"))
     protected void tick(CallbackInfo ci) {
@@ -98,6 +117,21 @@ public abstract class PlayerMixin implements ICustomPlayerData {
                     && (Math.abs(expectedDimensions.width - (float) player.getBoundingBox().getXsize()) > 1.0E-4f
                     || Math.abs(expectedDimensions.height - (float) player.getBoundingBox().getYsize()) > 1.0E-4f)) {
                 player.refreshDimensions();
+            }
+        } else {
+            // Send only the blocks added this tick (a small delta) to everyone tracking this player,
+            // instead of re-serializing the whole store. A copy is sent so clearing is safe regardless
+            // of when the loader serializes the packet.
+            if (katamariIO$pendingAdds.size() > 0) {
+                ModNetwork.sendBlocksDelta((ServerPlayer) player,
+                        new S2CKatamariDeltaPacket(player.getId(), new KatamariBlocks(katamariIO$pendingAdds)));
+                katamariIO$pendingAdds.clear();
+            }
+            // Occasional keyframe: resync the full store via entity data so clients stay bounded and
+            // any drift is corrected. New trackers still get the current store as their snapshot.
+            if (katamariIO$blocksDirty && player.tickCount % KATAMARI_KEYFRAME_INTERVAL == 0) {
+                player.getEntityData().set(SPHERICAL_PLAYER_BLOCKS, player.getEntityData().get(SPHERICAL_PLAYER_BLOCKS), true);
+                katamariIO$blocksDirty = false;
             }
         }
     }
@@ -127,9 +161,7 @@ public abstract class PlayerMixin implements ICustomPlayerData {
         positionTag.putFloat("z", 0);
         entity.getEntityData().define(CURRENT_POSITION, positionTag);
 
-        entity.getEntityData().define(SPHERICAL_PLAYER_POSITION_LIST, new ArrayList<>());
-        entity.getEntityData().define(SPHERICAL_PLAYER_QUATERNION_LIST, new ArrayList<>());
-        entity.getEntityData().define(SPHERICAL_PLAYER_BLOCK_LIST, new ArrayList<>());
+        entity.getEntityData().define(SPHERICAL_PLAYER_BLOCKS, new KatamariBlocks());
         entity.getEntityData().define(SPHERICAL_PLAYER_BLOCK_COUNT, 0);
     }
 
@@ -145,32 +177,55 @@ public abstract class PlayerMixin implements ICustomPlayerData {
         compound.put("SPM_POSITION", dataManager.get(CURRENT_POSITION));
         compound.putInt("SPM_BlockCount", dataManager.get(SPHERICAL_PLAYER_BLOCK_COUNT));
 
-        List<Block> blocks = dataManager.get(SPHERICAL_PLAYER_BLOCK_LIST);
-        List<Vec3> positions = dataManager.get(SPHERICAL_PLAYER_POSITION_LIST);
-        List<Quaternionf> quaternions = dataManager.get(SPHERICAL_PLAYER_QUATERNION_LIST);
-        int size = Math.min(blocks.size(), Math.min(positions.size(), quaternions.size()));
-        ListTag attachedList = new ListTag();
+        KatamariBlocks attached = dataManager.get(SPHERICAL_PLAYER_BLOCKS);
+        int size = attached.size();
+
+        // Compact layout instead of one CompoundTag per block: a deduped block palette,
+        // int palette-indices, 16-bit positions (shared float scale), and 8-bit quaternions.
+        float maxAbs = 0.0f;
         for (int i = 0; i < size; i++) {
-            Block block = blocks.get(i);
-            Vec3 pos = positions.get(i);
-            Quaternionf quat = quaternions.get(i);
+            maxAbs = Math.max(maxAbs,
+                    Math.max(Math.abs(attached.posX(i)), Math.max(Math.abs(attached.posY(i)), Math.abs(attached.posZ(i)))));
+        }
+        float invScale = maxAbs > 0.0f ? 32767.0f / maxAbs : 0.0f;
+
+        ListTag palette = new ListTag();
+        Map<Block, Integer> paletteIndex = new HashMap<>();
+        int[] blockIds = new int[size];
+        byte[] posBytes = new byte[size * 6];
+        byte[] quatBytes = new byte[size * 4];
+        int kept = 0;
+        for (int i = 0; i < size; i++) {
+            Block block = attached.block(i);
             ResourceLocation key = BuiltInRegistries.BLOCK.getKey(block);
             if (key == null) {
                 continue;
             }
+            Integer pi = paletteIndex.get(block);
+            if (pi == null) {
+                pi = palette.size();
+                palette.add(StringTag.valueOf(key.toString()));
+                paletteIndex.put(block, pi);
+            }
 
-            CompoundTag entry = new CompoundTag();
-            entry.putString("block", key.toString());
-            entry.putDouble("x", pos.x);
-            entry.putDouble("y", pos.y);
-            entry.putDouble("z", pos.z);
-            entry.putFloat("qx", quat.x);
-            entry.putFloat("qy", quat.y);
-            entry.putFloat("qz", quat.z);
-            entry.putFloat("qw", quat.w);
-            attachedList.add(entry);
+            blockIds[kept] = pi;
+            katamariIO$putShort(posBytes, kept * 6, (short) Math.round(attached.posX(i) * invScale));
+            katamariIO$putShort(posBytes, kept * 6 + 2, (short) Math.round(attached.posY(i) * invScale));
+            katamariIO$putShort(posBytes, kept * 6 + 4, (short) Math.round(attached.posZ(i) * invScale));
+            quatBytes[kept * 4] = katamariIO$quantizeQuat(attached.quatX(i));
+            quatBytes[kept * 4 + 1] = katamariIO$quantizeQuat(attached.quatY(i));
+            quatBytes[kept * 4 + 2] = katamariIO$quantizeQuat(attached.quatZ(i));
+            quatBytes[kept * 4 + 3] = katamariIO$quantizeQuat(attached.quatW(i));
+            kept++;
         }
-        compound.put(SPM_ATTACHED_BLOCKS, attachedList);
+
+        CompoundTag packed = new CompoundTag();
+        packed.put("palette", palette);
+        packed.putFloat("posScale", maxAbs);
+        packed.putIntArray("blocks", kept == size ? blockIds : Arrays.copyOf(blockIds, kept));
+        packed.putByteArray("pos", kept * 6 == posBytes.length ? posBytes : Arrays.copyOf(posBytes, kept * 6));
+        packed.putByteArray("quat", kept * 4 == quatBytes.length ? quatBytes : Arrays.copyOf(quatBytes, kept * 4));
+        compound.put(SPM_ATTACHED_BLOCKS_V2, packed);
     }
 
     @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
@@ -201,14 +256,46 @@ public abstract class PlayerMixin implements ICustomPlayerData {
         if (compound.contains("SPM_BlockCount")) {
             dataManager.set(SPHERICAL_PLAYER_BLOCK_COUNT, compound.getInt("SPM_BlockCount"));
         } else {
-            dataManager.set(SPHERICAL_PLAYER_BLOCK_COUNT, dataManager.get(SPHERICAL_PLAYER_BLOCK_LIST).size());
+            dataManager.set(SPHERICAL_PLAYER_BLOCK_COUNT, dataManager.get(SPHERICAL_PLAYER_BLOCKS).size());
         }
 
-        if (compound.contains(SPM_ATTACHED_BLOCKS, Tag.TAG_LIST)) {
+        if (compound.contains(SPM_ATTACHED_BLOCKS_V2, Tag.TAG_COMPOUND)) {
+            CompoundTag packed = compound.getCompound(SPM_ATTACHED_BLOCKS_V2);
+            ListTag palette = packed.getList("palette", Tag.TAG_STRING);
+            float scale = packed.getFloat("posScale") / 32767.0f;
+            int[] blockIds = packed.getIntArray("blocks");
+            byte[] posBytes = packed.getByteArray("pos");
+            byte[] quatBytes = packed.getByteArray("quat");
+
+            Block[] paletteBlocks = new Block[palette.size()];
+            for (int p = 0; p < paletteBlocks.length; p++) {
+                ResourceLocation key = ResourceLocation.tryParse(palette.getString(p));
+                paletteBlocks[p] = (key != null && BuiltInRegistries.BLOCK.containsKey(key))
+                        ? BuiltInRegistries.BLOCK.get(key) : null;
+            }
+
+            int count = Math.min(blockIds.length, Math.min(posBytes.length / 6, quatBytes.length / 4));
+            KatamariBlocks attached = new KatamariBlocks(Math.max(1, count));
+            for (int i = 0; i < count; i++) {
+                int pi = blockIds[i];
+                if (pi < 0 || pi >= paletteBlocks.length || paletteBlocks[pi] == null) {
+                    continue;
+                }
+                attached.add(paletteBlocks[pi],
+                        katamariIO$dequantizeQuat(quatBytes[i * 4], quatBytes[i * 4 + 1], quatBytes[i * 4 + 2], quatBytes[i * 4 + 3]),
+                        katamariIO$getShort(posBytes, i * 6) * scale,
+                        katamariIO$getShort(posBytes, i * 6 + 2) * scale,
+                        katamariIO$getShort(posBytes, i * 6 + 4) * scale);
+            }
+
+            dataManager.set(SPHERICAL_PLAYER_BLOCKS, attached, true);
+            dataManager.set(SPHERICAL_PLAYER_BLOCK_COUNT, attached.size());
+            katamariIO$binRadiiDirty = true;
+            katamariIO$addsSincePrune = 0;
+        } else if (compound.contains(SPM_ATTACHED_BLOCKS, Tag.TAG_LIST)) {
+            // Legacy format (pre-compression): one CompoundTag per block. Still readable.
             ListTag attachedList = compound.getList(SPM_ATTACHED_BLOCKS, Tag.TAG_COMPOUND);
-            List<Block> blocks = new ArrayList<>();
-            List<Vec3> positions = new ArrayList<>();
-            List<Quaternionf> quaternions = new ArrayList<>();
+            KatamariBlocks attached = new KatamariBlocks(Math.max(1, attachedList.size()));
 
             for (int i = 0; i < attachedList.size(); i++) {
                 CompoundTag entry = attachedList.getCompound(i);
@@ -216,23 +303,19 @@ public abstract class PlayerMixin implements ICustomPlayerData {
                 if (key == null || !BuiltInRegistries.BLOCK.containsKey(key)) {
                     continue;
                 }
-                Block block = BuiltInRegistries.BLOCK.get(key);
-                blocks.add(block);
-                positions.add(new Vec3(entry.getDouble("x"), entry.getDouble("y"), entry.getDouble("z")));
-                quaternions.add(new Quaternionf(
-                        entry.getFloat("qx"),
-                        entry.getFloat("qy"),
-                        entry.getFloat("qz"),
-                        entry.getFloat("qw")
-                ));
+                attached.add(BuiltInRegistries.BLOCK.get(key),
+                        new Quaternionf(entry.getFloat("qx"), entry.getFloat("qy"), entry.getFloat("qz"), entry.getFloat("qw")),
+                        entry.getDouble("x"), entry.getDouble("y"), entry.getDouble("z"));
             }
 
-            dataManager.set(SPHERICAL_PLAYER_BLOCK_LIST, blocks, true);
-            dataManager.set(SPHERICAL_PLAYER_POSITION_LIST, positions, true);
-            dataManager.set(SPHERICAL_PLAYER_QUATERNION_LIST, quaternions, true);
-            dataManager.set(SPHERICAL_PLAYER_BLOCK_COUNT, blocks.size());
+            dataManager.set(SPHERICAL_PLAYER_BLOCKS, attached, true);
+            dataManager.set(SPHERICAL_PLAYER_BLOCK_COUNT, attached.size());
             katamariIO$binRadiiDirty = true;
+            katamariIO$addsSincePrune = 0;
         }
+
+        // Bound the loaded shell immediately (old saves may hold tens of thousands of blocks).
+        katamariIO$pruneDataParameterByRadius(entity);
     }
 
     @Inject(method = "getStandingEyeHeight", at = @At("HEAD"), cancellable = true)
@@ -339,6 +422,34 @@ public abstract class PlayerMixin implements ICustomPlayerData {
         return quaternion;
     }
 
+    @Unique
+    private static byte katamariIO$quantizeQuat(float value) {
+        float clamped = Math.max(-1.0f, Math.min(1.0f, value));
+        return (byte) Math.round(clamped * 127.0f);
+    }
+
+    @Unique
+    private static Quaternionf katamariIO$dequantizeQuat(byte x, byte y, byte z, byte w) {
+        Quaternionf q = new Quaternionf(x / 127.0f, y / 127.0f, z / 127.0f, w / 127.0f);
+        if (q.lengthSquared() > 1.0E-6f) {
+            q.normalize();
+        } else {
+            q.set(0.0f, 0.0f, 0.0f, 1.0f);
+        }
+        return q;
+    }
+
+    @Unique
+    private static void katamariIO$putShort(byte[] array, int offset, short value) {
+        array[offset] = (byte) (value >> 8);
+        array[offset + 1] = (byte) value;
+    }
+
+    @Unique
+    private static short katamariIO$getShort(byte[] array, int offset) {
+        return (short) (((array[offset] & 0xFF) << 8) | (array[offset + 1] & 0xFF));
+    }
+
     @Override
     public void katamariIO$setCurrentPosition(Vec3 pos) {
         Player entity = (Player) (Object) this;
@@ -393,19 +504,16 @@ public abstract class PlayerMixin implements ICustomPlayerData {
     @Override
     public void katamariIO$addBlock(Block block, Quaternionf quaternionf, Vec3 vec3) {
         Player entity = (Player) (Object) this;
-        List<Block> blocks = entity.getEntityData().get(SPHERICAL_PLAYER_BLOCK_LIST);
-        List<Quaternionf> quaternionfs = entity.getEntityData().get(SPHERICAL_PLAYER_QUATERNION_LIST);
-        List<Vec3> vec3s = entity.getEntityData().get(SPHERICAL_PLAYER_POSITION_LIST);
-        blocks.add(block);
-        quaternionfs.add(quaternionf);
-        vec3s.add(vec3);
-        entity.getEntityData().set(SPHERICAL_PLAYER_BLOCK_LIST, blocks, true);
-        entity.getEntityData().set(SPHERICAL_PLAYER_POSITION_LIST, vec3s, true);
-        entity.getEntityData().set(SPHERICAL_PLAYER_QUATERNION_LIST, quaternionfs, true);
+        KatamariBlocks blocks = entity.getEntityData().get(SPHERICAL_PLAYER_BLOCKS);
+        blocks.add(block, quaternionf, vec3.x, vec3.y, vec3.z);
+        katamariIO$pendingAdds.add(block, quaternionf, vec3.x, vec3.y, vec3.z);
+        katamariIO$blocksDirty = true;
         int currentCount = entity.getEntityData().get(SPHERICAL_PLAYER_BLOCK_COUNT);
         entity.getEntityData().set(SPHERICAL_PLAYER_BLOCK_COUNT, currentCount + 1);
         katamariIO$applyBlockRadiusIncremental(entity, vec3);
-        katamariIO$pruneDataParameterByRadius(entity);
+        if (++katamariIO$addsSincePrune >= KATAMARI_PRUNE_ADD_INTERVAL) {
+            katamariIO$pruneDataParameterByRadius(entity);
+        }
     }
 
     @Override
@@ -416,26 +524,18 @@ public abstract class PlayerMixin implements ICustomPlayerData {
     @Override
     public void katamariIO$clearAttachedBlocks() {
         Player entity = (Player) (Object) this;
-        entity.getEntityData().set(SPHERICAL_PLAYER_BLOCK_LIST, new ArrayList<>(), true);
-        entity.getEntityData().set(SPHERICAL_PLAYER_POSITION_LIST, new ArrayList<>(), true);
-        entity.getEntityData().set(SPHERICAL_PLAYER_QUATERNION_LIST, new ArrayList<>(), true);
+        KatamariBlocks blocks = entity.getEntityData().get(SPHERICAL_PLAYER_BLOCKS);
+        blocks.clear();
+        entity.getEntityData().set(SPHERICAL_PLAYER_BLOCKS, blocks, true);
         entity.getEntityData().set(SPHERICAL_PLAYER_BLOCK_COUNT, 0);
         katamariIO$binRadiiDirty = true;
+        katamariIO$addsSincePrune = 0;
+        katamariIO$blocksDirty = false;
     }
 
     @Override
-    public List<Vec3> katamariIO$getSphericalPlayerPositions() {
-        return ((Player) (Object) this).getEntityData().get(SPHERICAL_PLAYER_POSITION_LIST);
-    }
-
-    @Override
-    public List<Quaternionf> katamariIO$getSphericalPlayerQuaternions() {
-        return ((Player) (Object) this).getEntityData().get(SPHERICAL_PLAYER_QUATERNION_LIST);
-    }
-
-    @Override
-    public List<Block> katamariIO$getSphericalPlayerBlocks() {
-        return ((Player) (Object) this).getEntityData().get(SPHERICAL_PLAYER_BLOCK_LIST);
+    public KatamariBlocks katamariIO$getBlocks() {
+        return ((Player) (Object) this).getEntityData().get(SPHERICAL_PLAYER_BLOCKS);
     }
 
     @Unique
@@ -482,17 +582,17 @@ public abstract class PlayerMixin implements ICustomPlayerData {
             katamariIO$binMaxRadii[i] = baseCollisionRadius;
         }
 
-        List<Vec3> vec3s = entity.getEntityData().get(SPHERICAL_PLAYER_POSITION_LIST);
-        for (Vec3 offset : vec3s) {
-            float distance = (float) offset.length();
+        KatamariBlocks attached = entity.getEntityData().get(SPHERICAL_PLAYER_BLOCKS);
+        for (int i = 0; i < attached.size(); i++) {
+            float distance = (float) attached.length(i);
             if (distance < 1.0E-6f) {
                 continue;
             }
 
             float blockOuterRadius = distance + KATAMARI_BLOCK_EXTENT;
-            float nx = (float) (offset.x / distance);
-            float ny = (float) (offset.y / distance);
-            float nz = (float) (offset.z / distance);
+            float nx = attached.posX(i) / distance;
+            float ny = attached.posY(i) / distance;
+            float nz = attached.posZ(i) / distance;
             int index = katamariIO$getAngularBinIndex(nx, ny, nz);
             if (blockOuterRadius > katamariIO$binMaxRadii[index]) {
                 katamariIO$binMaxRadii[index] = blockOuterRadius;
@@ -526,37 +626,16 @@ public abstract class PlayerMixin implements ICustomPlayerData {
 
     @Unique
     private void katamariIO$pruneDataParameterByRadius(Player entity) {
-        float collisionRadius = entity.getEntityData().get(sphericalPlayerMod$SIZE) / 2.0f;
-        float cutoffRadius = Math.max(0.0f, collisionRadius - KATAMARI_DP_CUTOFF_OFFSET);
+        katamariIO$addsSincePrune = 0;
 
-        List<Block> blocks = entity.getEntityData().get(SPHERICAL_PLAYER_BLOCK_LIST);
-        List<Quaternionf> quaternions = entity.getEntityData().get(SPHERICAL_PLAYER_QUATERNION_LIST);
-        List<Vec3> positions = entity.getEntityData().get(SPHERICAL_PLAYER_POSITION_LIST);
-        int size = Math.min(blocks.size(), Math.min(quaternions.size(), positions.size()));
-
-        List<Block> keptBlocks = new ArrayList<>(size);
-        List<Quaternionf> keptQuaternions = new ArrayList<>(size);
-        List<Vec3> keptPositions = new ArrayList<>(size);
-        boolean changed = false;
-
-        for (int i = 0; i < size; i++) {
-            Vec3 pos = positions.get(i);
-            double blockOuterRadius = pos.length() + KATAMARI_BLOCK_EXTENT;
-            if (blockOuterRadius < cutoffRadius) {
-                changed = true;
-                continue;
-            }
-            keptBlocks.add(blocks.get(i));
-            keptQuaternions.add(quaternions.get(i));
-            keptPositions.add(pos);
+        // Once the ball is reasonably large, keep only the outer blocks per (radius-scaled) angular
+        // bin so the retained count is bounded by the visible surface, no matter how many blocks were
+        // collected. Small balls keep every block. The bins track the render surface, so every block
+        // the renderer could draw is kept.
+        KatamariBlocks blocks = entity.getEntityData().get(SPHERICAL_PLAYER_BLOCKS);
+        if (blocks.pruneToSurface(KATAMARI_PRUNE_MIN_RADIUS, KATAMARI_PRUNE_MIN_LAT_BINS,
+                KATAMARI_PRUNE_MAX_LAT_BINS, KATAMARI_PRUNE_SHELL_THICKNESS)) {
+            katamariIO$blocksDirty = true;
         }
-
-        if (!changed) {
-            return;
-        }
-
-        entity.getEntityData().set(SPHERICAL_PLAYER_BLOCK_LIST, keptBlocks, true);
-        entity.getEntityData().set(SPHERICAL_PLAYER_QUATERNION_LIST, keptQuaternions, true);
-        entity.getEntityData().set(SPHERICAL_PLAYER_POSITION_LIST, keptPositions, true);
     }
 }

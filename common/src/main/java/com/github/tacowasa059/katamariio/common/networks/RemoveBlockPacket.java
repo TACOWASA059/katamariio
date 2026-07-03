@@ -42,6 +42,8 @@ public class RemoveBlockPacket {
             return;
         }
 
+        // Full neighbour updates so eaten blocks stay lively (snow/sand fall, water/lava flow into
+        // the holes). The per-tick eat rate limit keeps the neighbour-update cost bounded.
         level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
         level.removeBlockEntity(pos);
 

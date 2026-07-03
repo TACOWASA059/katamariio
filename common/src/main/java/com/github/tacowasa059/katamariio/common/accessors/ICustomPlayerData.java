@@ -1,10 +1,9 @@
 package com.github.tacowasa059.katamariio.common.accessors;
 
+import com.github.tacowasa059.katamariio.common.data.KatamariBlocks;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
-
-import java.util.List;
 
 public interface ICustomPlayerData {
     void katamariIO$setSize(float size);
@@ -32,7 +31,5 @@ public interface ICustomPlayerData {
     int katamariIO$getAttachedBlockCount();
     void katamariIO$clearAttachedBlocks();
 
-    List<Vec3> katamariIO$getSphericalPlayerPositions();
-    List<Quaternionf> katamariIO$getSphericalPlayerQuaternions();
-    List<Block> katamariIO$getSphericalPlayerBlocks();
+    KatamariBlocks katamariIO$getBlocks();
 }

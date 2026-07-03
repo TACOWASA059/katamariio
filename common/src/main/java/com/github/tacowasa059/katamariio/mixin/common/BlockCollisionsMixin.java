@@ -30,7 +30,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.util.Optional;
 import java.util.function.BiFunction;
 
 @Mixin(BlockCollisions.class)
@@ -71,6 +70,10 @@ public abstract class BlockCollisionsMixin<T> extends AbstractIterator<T> {
     @Inject(method = "computeNext", at = @At("HEAD"), cancellable = true)
     public void computeNext(CallbackInfoReturnable<T> cir) {
         if (katamariIO$entity instanceof Player player && ((ICustomPlayerData) player).katamariIO$getFlag()) {
+            float ballRadius = player.getDimensions(Pose.STANDING).height / 2.0f;
+            Vec3 ballCenter = player.position().add(0.0, ballRadius, 0.0);
+            double feetY = player.position().y;
+            double ballRadiusSq = (double) ballRadius * ballRadius;
             while (true) {
                 if (!this.cursor.advance()) {
                     cir.setReturnValue(this.endOfData());
@@ -82,6 +85,13 @@ public abstract class BlockCollisionsMixin<T> extends AbstractIterator<T> {
                 int z = this.cursor.nextZ();
                 int type = this.cursor.getNextType();
                 if (type == 3) {
+                    continue;
+                }
+
+                // Cells above the ball's feet that lie entirely outside the pickup sphere can be
+                // neither a floor collision nor a pickup, so skip the block-state and collision-shape
+                // lookups for them. Cells at or below feet are kept for floor support regardless.
+                if (y >= feetY && katamariIO$isCellOutsideBall(x, y, z, ballCenter, ballRadiusSq)) {
                     continue;
                 }
 
@@ -103,7 +113,7 @@ public abstract class BlockCollisionsMixin<T> extends AbstractIterator<T> {
                     }
                     voxelShape = voxelShape.move(x, y, z);
                     T result = this.resultProvider.apply(this.pos, voxelShape);
-                    if (katamariIO$handleCollision(player, voxelShape.bounds(), voxelShape, x, y, z)) {
+                    if (katamariIO$handleCollision(player, voxelShape.bounds(), ballRadius, ballCenter, feetY, x, y, z)) {
                         cir.setReturnValue(result);
                         return;
                     }
@@ -116,7 +126,7 @@ public abstract class BlockCollisionsMixin<T> extends AbstractIterator<T> {
                 }
 
                 T result = this.resultProvider.apply(this.pos, voxelShape);
-                if (katamariIO$handleCollision(player, movedShape.bounds(), movedShape, x, y, z)) {
+                if (katamariIO$handleCollision(player, movedShape.bounds(), ballRadius, ballCenter, feetY, x, y, z)) {
                     cir.setReturnValue(result);
                     return;
                 }
@@ -168,18 +178,34 @@ public abstract class BlockCollisionsMixin<T> extends AbstractIterator<T> {
     }
 
     @Unique
-    private boolean katamariIO$handleCollision(Player player, AABB aabb, VoxelShape shape, int x, int y, int z) {
-        float radius = player.getDimensions(Pose.STANDING).height / 2.0f;
-        Vec3 center = player.position().add(0, radius, 0);
-        Optional<Vec3> closest = shape.closestPointTo(center);
-
-        if (aabb.minY < player.position().y) {
+    private boolean katamariIO$handleCollision(Player player, AABB aabb, double radius, Vec3 center, double feetY, int x, int y, int z) {
+        if (aabb.minY < feetY) {
             return true;
         }
-        if (closest.isPresent() && closest.get().distanceTo(center) <= radius && player.level().isClientSide) {
+        // Closest point of the block bounds to the ball centre via a cheap AABB clamp, instead of the
+        // expensive VoxelShape.closestPointTo plus per-cell allocations that used to run for every
+        // contacted block (which overloaded the server for a large ball).
+        double cx = Math.max(aabb.minX, Math.min(center.x, aabb.maxX));
+        double cy = Math.max(aabb.minY, Math.min(center.y, aabb.maxY));
+        double cz = Math.max(aabb.minZ, Math.min(center.z, aabb.maxZ));
+        double dx = cx - center.x;
+        double dy = cy - center.y;
+        double dz = cz - center.z;
+        if (dx * dx + dy * dy + dz * dz <= radius * radius && player.level().isClientSide) {
             NeighboringBlockUtils.processNeighboring(player, new BlockPos(x, y, z));
         }
         return false;
+    }
+
+    @Unique
+    private static boolean katamariIO$isCellOutsideBall(int x, int y, int z, Vec3 center, double radiusSq) {
+        double cx = Math.max(x, Math.min(center.x, x + 1.0));
+        double cy = Math.max(y, Math.min(center.y, y + 1.0));
+        double cz = Math.max(z, Math.min(center.z, z + 1.0));
+        double dx = cx - center.x;
+        double dy = cy - center.y;
+        double dz = cz - center.z;
+        return dx * dx + dy * dy + dz * dz > radiusSq;
     }
 
     public T computeNext() {

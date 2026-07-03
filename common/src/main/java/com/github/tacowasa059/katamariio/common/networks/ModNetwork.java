@@ -26,6 +26,11 @@ public class ModNetwork {
                 new S2CPlayerPacket(collisionSize, renderSize, flag, restitution, quaternion, currentPos));
     }
 
+    /** Sends a katamari block delta to everyone tracking {@code owner} (including the owner). */
+    public static void sendBlocksDelta(ServerPlayer owner, S2CKatamariDeltaPacket packet) {
+        requireHandler().sendBlocksDelta(owner, packet);
+    }
+
     private static NetworkHandler requireHandler() {
         if (handler == null) {
             throw new IllegalStateException("Katamari networking has not been bootstrapped");
@@ -39,5 +44,7 @@ public class ModNetwork {
         void sendToServer(RemoveBlockPacket packet);
 
         void sendInitialData(ServerPlayer player, S2CPlayerPacket packet);
+
+        void sendBlocksDelta(ServerPlayer owner, S2CKatamariDeltaPacket packet);
     }
 }
