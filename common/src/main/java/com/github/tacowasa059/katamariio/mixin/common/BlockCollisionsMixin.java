@@ -121,11 +121,20 @@ public abstract class BlockCollisionsMixin<T> extends AbstractIterator<T> {
                 }
 
                 VoxelShape movedShape = voxelShape.move(x, y, z);
-                if (movedShape.isEmpty() || !Shapes.joinIsNotEmpty(movedShape, this.entityShape, BooleanOp.AND)) {
+                if (movedShape.isEmpty()) {
+                    // No collision shape (plants, torches, redstone, etc.): the katamari still eats
+                    // them if within the pickup radius, even though they never produce a physics
+                    // collision. Air and fluids are left alone.
+                    if (player.level().isClientSide) {
+                        katamariIO$tryEatShapeless(player, ballRadius, ballCenter, state, x, y, z);
+                    }
+                    continue;
+                }
+                if (!Shapes.joinIsNotEmpty(movedShape, this.entityShape, BooleanOp.AND)) {
                     continue;
                 }
 
-                T result = this.resultProvider.apply(this.pos, voxelShape);
+                T result = this.resultProvider.apply(this.pos, movedShape);
                 if (katamariIO$handleCollision(player, movedShape.bounds(), ballRadius, ballCenter, feetY, x, y, z)) {
                     cir.setReturnValue(result);
                     return;
@@ -195,6 +204,22 @@ public abstract class BlockCollisionsMixin<T> extends AbstractIterator<T> {
             NeighboringBlockUtils.processNeighboring(player, new BlockPos(x, y, z));
         }
         return false;
+    }
+
+    @Unique
+    private void katamariIO$tryEatShapeless(Player player, double radius, Vec3 center, BlockState state, int x, int y, int z) {
+        if (state.isAir() || !state.getFluidState().isEmpty()) {
+            return;
+        }
+        double cx = Math.max(x, Math.min(center.x, x + 1.0));
+        double cy = Math.max(y, Math.min(center.y, y + 1.0));
+        double cz = Math.max(z, Math.min(center.z, z + 1.0));
+        double dx = cx - center.x;
+        double dy = cy - center.y;
+        double dz = cz - center.z;
+        if (dx * dx + dy * dy + dz * dz <= radius * radius) {
+            NeighboringBlockUtils.processNeighboring(player, new BlockPos(x, y, z));
+        }
     }
 
     @Unique
