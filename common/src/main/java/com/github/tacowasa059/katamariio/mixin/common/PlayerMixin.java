@@ -63,9 +63,9 @@ public abstract class PlayerMixin implements ICustomPlayerData {
     @Unique
     private Quaternionf sphericalPlayerMod$prevQuaternion = new Quaternionf(0, 0, 0, 1);
     @Unique
-    private static final int KATAMARI_COLLISION_LAT_BINS = 4;
+    private static final int KATAMARI_COLLISION_LAT_BINS = 6;
     @Unique
-    private static final int KATAMARI_COLLISION_LON_BINS = 8;
+    private static final int KATAMARI_COLLISION_LON_BINS = 12;
     @Unique
     private static final float KATAMARI_BLOCK_EXTENT = 0.5f;
     @Unique
