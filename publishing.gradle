@@ -17,7 +17,10 @@ KatamariIO 1.2.0 for Minecraft 1.20.1.
 
 def loaderName = project.name == 'fabric' ? 'Fabric' : 'Forge'
 def modrinthLoader = project.name == 'fabric' ? 'fabric' : 'forge'
-def artifactTask = project.name == 'fabric' ? tasks.named('remapJar').get() : tasks.named('jar').get()
+def isFabric = project.name == 'fabric'
+def uploadArtifact = isFabric
+        ? tasks.named('remapJar').get()
+        : layout.buildDirectory.file("libs/${tasks.named('jar').get().archiveFileName.get()}").get().asFile
 def releaseVersion = "${loaderName}${minecraft_version}-${project.version}"
 
 modrinth {
@@ -26,10 +29,14 @@ modrinth {
     versionNumber = releaseVersion
     versionName = releaseVersion
     versionType = 'release'
-    uploadFile = artifactTask
+    uploadFile = uploadArtifact
     gameVersions = [minecraft_version]
     loaders = [modrinthLoader]
     changelog = releaseChangelog
+}
+
+if (!isFabric) {
+    tasks.named('modrinth') { dependsOn 'reobfJar' }
 }
 
 def curseForgeTaskClass = plugins.findPlugin('net.darkhax.curseforgegradle').class.classLoader
@@ -38,8 +45,9 @@ def curseForgeTaskClass = plugins.findPlugin('net.darkhax.curseforgegradle').cla
 tasks.register('publishCurseForge', curseForgeTaskClass) {
     group = 'publishing'
     description = "Uploads the ${loaderName} artifact to CurseForge."
+    if (!isFabric) dependsOn 'reobfJar'
     apiToken = System.getenv('CURSEFORGE_TOKEN')
-    def uploadedFile = upload('1566362', artifactTask)
+    def uploadedFile = upload('1566362', uploadArtifact)
     uploadedFile.changelog = releaseChangelog
     uploadedFile.changelogType = 'markdown'
     uploadedFile.releaseType = 'release'
