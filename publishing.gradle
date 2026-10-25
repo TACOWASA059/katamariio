@@ -1,19 +1,6 @@
 // Upload tasks for the existing Katamari projects. Credentials are read only
 // when a publish task runs, so ordinary builds do not need API tokens.
-def releaseChangelog = '''
-KatamariIO 1.2.0 for Minecraft 1.20.1.
-
-### Added
-- Replaced the latitude/longitude collision grid with a uniform Fibonacci sphere grid for consistent collision sampling across the ball surface.
-- Added `/katamari resetAll` and `/katamari resetEntities`, plus configuration options for ball attachments, riding, and filters.
-- Added English and Japanese translations and reach that scales with ball size.
-
-### Fixed
-- Fixed attached blocks and entities extending beyond the collision shell, including slabs, carpets, and other partial blocks.
-- Smoothed movement over water and corrected swimming and diving controls.
-- Fixed rolling direction and synchronization of attached entities, passengers, and cameras.
-- Released entities now move clear of the ball and cannot be reattached for three seconds.
-'''.stripIndent().trim()
+def releaseChangelog = rootProject.file('RELEASE_NOTES_1.2.0.md').getText('UTF-8').trim()
 
 def loaderName = project.name == 'fabric' ? 'Fabric' : 'Forge'
 def modrinthLoader = project.name == 'fabric' ? 'fabric' : 'forge'
