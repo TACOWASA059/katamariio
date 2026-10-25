@@ -17,6 +17,7 @@ public final class KatamariIO {
             return;
         }
         initialized = true;
+        com.github.tacowasa059.katamariio.common.config.KatamariConfig.load();
         ModDataSerializers.register();
         ModNetwork.register();
     }

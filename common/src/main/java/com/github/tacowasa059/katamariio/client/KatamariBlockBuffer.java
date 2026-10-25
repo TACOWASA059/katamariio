@@ -16,6 +16,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.entity.player.Player;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import org.slf4j.Logger;
 
 import java.util.HashMap;
@@ -67,7 +68,7 @@ public final class KatamariBlockBuffer {
                 if (entry != null && entry.buffer != null) {
                     entry.buffer.close();
                 }
-                entry = build(blocks, packedLight, now);
+                entry = build(blocks, player.level(), packedLight, now);
                 CACHE.put(id, entry);
             }
 
@@ -92,7 +93,7 @@ public final class KatamariBlockBuffer {
         }
     }
 
-    private static Entry build(KatamariBlocks blocks, int packedLight, long now) {
+    private static Entry build(KatamariBlocks blocks, net.minecraft.world.level.BlockGetter level, int packedLight, long now) {
         int count = blocks.size();
         builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
         MultiBufferSource source = renderType -> builder;
@@ -104,8 +105,11 @@ public final class KatamariBlockBuffer {
             local.translate(blocks.posX(i), blocks.posY(i), blocks.posZ(i));
             rotation.set(blocks.quatX(i), blocks.quatY(i), blocks.quatZ(i), blocks.quatW(i));
             local.mulPose(rotation);
+            net.minecraft.world.level.block.Block block = blocks.block(i);
+            Vector3f centerOffset = com.github.tacowasa059.katamariio.common.utils.KatamariBlockUtils.getBlockCenterOffset(block, level);
+            local.translate(-centerOffset.x, -centerOffset.y, -centerOffset.z);
             Minecraft.getInstance().getBlockRenderer().renderSingleBlock(
-                    blocks.block(i).defaultBlockState(), local, source, packedLight, OverlayTexture.NO_OVERLAY);
+                    block.defaultBlockState(), local, source, packedLight, OverlayTexture.NO_OVERLAY);
             local.popPose();
         }
 

@@ -14,4 +14,12 @@ public final class FabricClientNetworkSender {
         packet.encode(buf);
         ClientPlayNetworking.send(FabricModNetwork.REMOVE_BLOCK_ID, buf);
     }
+
+    public static void sendRotationToServer(org.joml.Quaternionf quaternion) {
+        FriendlyByteBuf buf = PacketByteBufs.create();
+        com.github.tacowasa059.katamariio.common.networks.C2SPlayerRotationPacket packet =
+                new com.github.tacowasa059.katamariio.common.networks.C2SPlayerRotationPacket(quaternion);
+        com.github.tacowasa059.katamariio.common.networks.C2SPlayerRotationPacket.encode(packet, buf);
+        ClientPlayNetworking.send(FabricModNetwork.ROTATION_ID, buf);
+    }
 }

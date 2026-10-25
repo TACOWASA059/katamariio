@@ -23,6 +23,12 @@ public abstract class LivingEntityMixin extends Entity {
         super(entityType, level);
     }
 
+    @org.spongepowered.asm.mixin.Shadow
+    protected boolean jumping;
+
+    @org.spongepowered.asm.mixin.Shadow
+    protected float zza;
+
     @Inject(method = "knockback", at = @At("HEAD"), cancellable = true)
     public void modifyKnockback(double strength, double ratioX, double ratioZ, CallbackInfo ci) {
         LivingEntity entity = (LivingEntity) (Object) this;
@@ -98,24 +104,135 @@ public abstract class LivingEntityMixin extends Entity {
         }
     }
 
-    // Ball players ignore fluids, so travel() skips the water/lava branch (which applies drag and
-    // slow acceleration) and uses the normal branch where the mod's custom motion runs. This stops
-    // the katamari slowing down in water/lava.
     @Inject(method = "isAffectedByFluids", at = @At("HEAD"), cancellable = true)
     public void katamariIO$isAffectedByFluids(CallbackInfoReturnable<Boolean> cir) {
+        LivingEntity entity = (LivingEntity) (Object) this;
+        if (entity instanceof Player player && ((ICustomPlayerData) player).katamariIO$getFlag()) {
+            boolean submerged = player.isEyeInFluid(net.minecraft.tags.FluidTags.WATER)
+                    || player.isEyeInFluid(net.minecraft.tags.FluidTags.LAVA);
+            boolean wantsToDive = player.isShiftKeyDown() || player.isCrouching()
+                    || (player.getXRot() > 50.0F && this.zza > 0.0F);
+
+            // If grounded or partially touching fluid (not actively submerged/diving), ignore fluid hindrance
+            if (player.onGround() || (!submerged && !wantsToDive)) {
+                cir.setReturnValue(false);
+            }
+        }
+    }
+
+    // Only allow standing on fluids when not submerged and not trying to dive (sneaking or looking down sharply),
+    // so players can roll across the water surface easily, while still being able to dive into the water naturally.
+    @Inject(method = "canStandOnFluid", at = @At("HEAD"), cancellable = true)
+    public void katamariIO$canStandOnFluid(FluidState fluidState, CallbackInfoReturnable<Boolean> cir) {
+        LivingEntity entity = (LivingEntity) (Object) this;
+        if (entity instanceof Player player && ((ICustomPlayerData) player).katamariIO$getFlag()) {
+            boolean submerged = player.isEyeInFluid(net.minecraft.tags.FluidTags.WATER)
+                    || player.isEyeInFluid(net.minecraft.tags.FluidTags.LAVA);
+            boolean wantsToDive = player.isShiftKeyDown() || player.isCrouching()
+                    || (player.getXRot() > 50.0F && this.zza > 0.0F);
+
+            if (submerged || wantsToDive) {
+                cir.setReturnValue(false);
+            } else {
+                cir.setReturnValue(true);
+            }
+        }
+    }
+
+    // Provide responsive upward buoyancy and ascent when pressing jump in fluid,
+    // responsive descent when sneaking or looking down to dive,
+    // smooth water surface hovering support in deep water,
+    // and seamless shore climbing assistance to prevent snagging and stalling.
+    @Inject(method = "travel", at = @At("HEAD"))
+    public void katamariIO$travelInFluid(Vec3 travelVector, CallbackInfo ci) {
+        LivingEntity entity = (LivingEntity) (Object) this;
+        if (entity instanceof Player player && ((ICustomPlayerData) player).katamariIO$getFlag()) {
+            if (player.getAbilities().flying) {
+                return;
+            }
+            if (player.isInWater() || player.isInLava()) {
+                Vec3 motion = player.getDeltaMovement();
+                boolean diving = player.isShiftKeyDown() || player.isCrouching()
+                        || (player.getXRot() > 50.0F && (this.zza > 0.0F || travelVector.z > 0.0D));
+                boolean submerged = player.isEyeInFluid(net.minecraft.tags.FluidTags.WATER)
+                        || player.isEyeInFluid(net.minecraft.tags.FluidTags.LAVA);
+
+                boolean deepWater = player.level().getFluidState(player.blockPosition().below()).is(net.minecraft.tags.FluidTags.WATER)
+                        || player.level().getFluidState(player.blockPosition().below()).is(net.minecraft.tags.FluidTags.LAVA);
+
+                if (this.jumping) {
+                    player.setDeltaMovement(motion.x, Math.max(motion.y + 0.08D, 0.32D), motion.z);
+                } else if (diving) {
+                    double diveSpeed = player.getXRot() > 50.0F ? -0.22D : -0.28D;
+                    player.setDeltaMovement(motion.x, Math.min(motion.y - 0.08D, diveSpeed), motion.z);
+                } else if (!submerged && deepWater && !player.onGround()) {
+                    // Surface hovering support: only smoothly lift player when actually floating in deep water.
+                    // Keep normal ground contact when onGround or in shallow water/shores.
+                    player.setDeltaMovement(motion.x, Math.max(motion.y, 0.04D), motion.z);
+                } else if (!player.onGround() && motion.y < -0.15D && deepWater) {
+                    player.setDeltaMovement(motion.x, -0.15D, motion.z);
+                }
+
+                // If moving towards an obstacle/shore while in water, assist climbing out onto land
+                if (player.horizontalCollision && (this.zza > 0.0F || travelVector.z > 0.0D || motion.horizontalDistanceSqr() > 1.0E-4)) {
+                    player.setDeltaMovement(motion.x, Math.max(motion.y, 0.28D), motion.z);
+                }
+            }
+        }
+    }
+
+    @Inject(method = "travel", at = @At("TAIL"))
+    public void katamariIO$travelTail(Vec3 travelVector, CallbackInfo ci) {
+        LivingEntity entity = (LivingEntity) (Object) this;
+        if (entity instanceof Player player && ((ICustomPlayerData) player).katamariIO$getFlag()) {
+            if (player.getAbilities().flying) {
+                return;
+            }
+            if (player.isInWater() || player.isInLava()) {
+                boolean submerged = player.isEyeInFluid(net.minecraft.tags.FluidTags.WATER)
+                        || player.isEyeInFluid(net.minecraft.tags.FluidTags.LAVA);
+                boolean diving = player.isShiftKeyDown() || player.isCrouching()
+                        || (player.getXRot() > 50.0F && (this.zza > 0.0F || travelVector.z > 0.0D));
+
+                boolean deepWater = player.level().getFluidState(player.blockPosition().below()).is(net.minecraft.tags.FluidTags.WATER)
+                        || player.level().getFluidState(player.blockPosition().below()).is(net.minecraft.tags.FluidTags.LAVA);
+
+                // Only clamp downward motion if floating on deep water surface.
+                // Never clamp downward motion when grounded or in shallow water, allowing normal landing and step-up.
+                if (!submerged && !diving && !this.jumping && deepWater && !player.onGround()) {
+                    Vec3 motion = player.getDeltaMovement();
+                    if (motion.y < 0.0D) {
+                        player.setDeltaMovement(motion.x, 0.0D, motion.z);
+                    }
+                }
+            }
+        }
+    }
+
+    @Inject(method = "doPush", at = @At("HEAD"), cancellable = true)
+    protected void katamariIO$doPush(Entity entity, CallbackInfo ci) {
+        LivingEntity self = (LivingEntity) (Object) this;
+        if (self instanceof Player player && ((ICustomPlayerData) player).katamariIO$getFlag()) {
+            ci.cancel();
+        } else if (entity instanceof Player otherPlayer && ((ICustomPlayerData) otherPlayer).katamariIO$getFlag()) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "isPushable", at = @At("HEAD"), cancellable = true)
+    public void katamariIO$isPushable(CallbackInfoReturnable<Boolean> cir) {
         LivingEntity entity = (LivingEntity) (Object) this;
         if (entity instanceof Player player && ((ICustomPlayerData) player).katamariIO$getFlag()) {
             cir.setReturnValue(false);
         }
     }
 
-    // travel()'s water/lava branch is guarded by !canStandOnFluid(...), so making the ball "stand on"
-    // fluids skips that branch (drag + slow accel) and lets it roll over water/lava at normal speed.
-    @Inject(method = "canStandOnFluid", at = @At("HEAD"), cancellable = true)
-    public void katamariIO$canStandOnFluid(FluidState fluidState, CallbackInfoReturnable<Boolean> cir) {
+    @Inject(method = "rideTick", at = @At("HEAD"), cancellable = true)
+    public void katamariIO$rideTick(CallbackInfo ci) {
         LivingEntity entity = (LivingEntity) (Object) this;
-        if (entity instanceof Player player && ((ICustomPlayerData) player).katamariIO$getFlag()) {
-            cir.setReturnValue(true);
+        if (entity.getVehicle() instanceof Player parentPlayer && ((ICustomPlayerData) parentPlayer).katamariIO$getFlag()) {
+            super.rideTick();
+            ci.cancel();
         }
     }
 }

@@ -16,21 +16,29 @@ import net.minecraft.world.level.Level;
 public class S2CKatamariDeltaPacket {
     private final int entityId;
     private final KatamariBlocks added;
+    private final boolean clearExisting;
 
     public S2CKatamariDeltaPacket(int entityId, KatamariBlocks added) {
+        this(entityId, added, false);
+    }
+
+    public S2CKatamariDeltaPacket(int entityId, KatamariBlocks added, boolean clearExisting) {
         this.entityId = entityId;
         this.added = added;
+        this.clearExisting = clearExisting;
     }
 
     public static void encode(S2CKatamariDeltaPacket packet, FriendlyByteBuf buf) {
         buf.writeVarInt(packet.entityId);
+        buf.writeBoolean(packet.clearExisting);
         ModDataSerializers.KATAMARI_BLOCKS.write(buf, packet.added);
     }
 
     public static S2CKatamariDeltaPacket decode(FriendlyByteBuf buf) {
         int entityId = buf.readVarInt();
+        boolean clearExisting = buf.readBoolean();
         KatamariBlocks added = ModDataSerializers.KATAMARI_BLOCKS.read(buf);
-        return new S2CKatamariDeltaPacket(entityId, added);
+        return new S2CKatamariDeltaPacket(entityId, added, clearExisting);
     }
 
     /** Applies the delta to the matching entity's block store on the client. */
@@ -43,9 +51,16 @@ public class S2CKatamariDeltaPacket {
             return;
         }
         KatamariBlocks store = data.katamariIO$getBlocks();
+        if (clearExisting) {
+            store.clear();
+            data.katamariIO$invalidateBinRadii();
+        }
         for (int i = 0; i < added.size(); i++) {
             store.addRaw(added.block(i), added.quatX(i), added.quatY(i), added.quatZ(i), added.quatW(i),
                     added.posX(i), added.posY(i), added.posZ(i));
+        }
+        if (added.size() > 0) {
+            data.katamariIO$invalidateBinRadii();
         }
     }
 }

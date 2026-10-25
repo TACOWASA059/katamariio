@@ -5,9 +5,13 @@
   "refmap": "${mod_id}.refmap.json",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "fabric.FabricLivingEntityTravelMixin"
+    "fabric.FabricLivingEntityTravelMixin",
+    "fabric.FabricInteractReachMixin"
   ],
-  "client": [],
+  "client": [
+    "fabric.client.FabricReachMixin",
+    "fabric.client.FabricGameRendererReachMixin"
+  ],
   "server": [],
   "injectors": {
     "defaultRequire": 1

@@ -2,7 +2,6 @@ package com.github.tacowasa059.katamariio.client;
 
 import com.github.tacowasa059.katamariio.common.networks.ModNetwork;
 import com.github.tacowasa059.katamariio.common.networks.RemoveBlockPacket;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 
@@ -17,8 +16,7 @@ public class NeighboringBlockUtils {
     private static int removalsThisTick = 0;
 
     public static void processNeighboring(Player player, BlockPos blockPos) {
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.player == null || !minecraft.player.equals(player)) {
+        if (!player.isLocalPlayer() || player.isSpectator() || !com.github.tacowasa059.katamariio.common.config.KatamariConfig.get().attachBlocks) {
             return;
         }
 
@@ -27,8 +25,13 @@ public class NeighboringBlockUtils {
             currentTick = tick;
             removalsThisTick = 0;
         }
-        if (removalsThisTick >= MAX_REMOVALS_PER_TICK) {
-            return;
+        int maxRemovals = com.github.tacowasa059.katamariio.common.config.KatamariConfig.get().maxRemovalsPerTick;
+        if (maxRemovals >= 0) {
+            float size = ((com.github.tacowasa059.katamariio.common.accessors.ICustomPlayerData) player).katamariIO$getSize();
+            int scaledMax = (int) (maxRemovals * Math.max(1.0f, size / 2.0f));
+            if (removalsThisTick >= scaledMax) {
+                return;
+            }
         }
         removalsThisTick++;
 

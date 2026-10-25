@@ -30,6 +30,12 @@ public final class ForgeClientStateSync {
         packet.apply(Minecraft.getInstance().level);
     }
 
+    public static void receiveConfig(com.github.tacowasa059.katamariio.common.networks.S2CConfigSyncPacket packet) {
+        if (packet != null) {
+            packet.apply();
+        }
+    }
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END || pendingPacket == null) {
@@ -42,5 +48,10 @@ public final class ForgeClientStateSync {
         S2CPlayerPacket packet = pendingPacket;
         pendingPacket = null;
         packet.applyToPlayer(player);
+    }
+
+    @SubscribeEvent
+    public static void onLoggingOut(net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) {
+        com.github.tacowasa059.katamariio.common.config.KatamariConfig.load();
     }
 }

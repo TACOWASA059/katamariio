@@ -20,5 +20,13 @@ public class KatamariIOFabricClient implements ClientModInitializer {
                     S2CKatamariDeltaPacket packet = S2CKatamariDeltaPacket.decode(buf);
                     client.execute(() -> packet.apply(client.level));
                 });
+        ClientPlayNetworking.registerGlobalReceiver(FabricModNetwork.S2C_CONFIG_SYNC_ID,
+                (client, handler, buf, responseSender) -> {
+                    com.github.tacowasa059.katamariio.common.networks.S2CConfigSyncPacket packet =
+                            com.github.tacowasa059.katamariio.common.networks.S2CConfigSyncPacket.decode(buf);
+                    client.execute(packet::apply);
+                });
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register(
+                (handler, client) -> com.github.tacowasa059.katamariio.common.config.KatamariConfig.load());
     }
 }

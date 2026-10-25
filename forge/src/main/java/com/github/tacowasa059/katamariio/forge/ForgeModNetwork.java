@@ -58,11 +58,35 @@ public class ForgeModNetwork implements ModNetwork.NetworkHandler {
                     context.setPacketHandled(true);
                 },
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(nextId++, com.github.tacowasa059.katamariio.common.networks.S2CConfigSyncPacket.class,
+                com.github.tacowasa059.katamariio.common.networks.S2CConfigSyncPacket::encode,
+                com.github.tacowasa059.katamariio.common.networks.S2CConfigSyncPacket::decode,
+                (packet, contextSupplier) -> {
+                    var context = contextSupplier.get();
+                    context.enqueueWork(() ->
+                            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ForgeClientStateSync.receiveConfig(packet)));
+                    context.setPacketHandled(true);
+                },
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(nextId++, com.github.tacowasa059.katamariio.common.networks.C2SPlayerRotationPacket.class,
+                com.github.tacowasa059.katamariio.common.networks.C2SPlayerRotationPacket::encode,
+                com.github.tacowasa059.katamariio.common.networks.C2SPlayerRotationPacket::decode,
+                (packet, contextSupplier) -> {
+                    var context = contextSupplier.get();
+                    context.enqueueWork(() -> packet.handle(context.getSender()));
+                    context.setPacketHandled(true);
+                },
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
     }
 
     @Override
     public void sendToServer(RemoveBlockPacket packet) {
         CHANNEL.sendToServer(packet);
+    }
+
+    @Override
+    public void sendRotationToServer(org.joml.Quaternionf quaternion) {
+        CHANNEL.sendToServer(new com.github.tacowasa059.katamariio.common.networks.C2SPlayerRotationPacket(quaternion));
     }
 
     @Override
@@ -73,5 +97,37 @@ public class ForgeModNetwork implements ModNetwork.NetworkHandler {
     @Override
     public void sendBlocksDelta(ServerPlayer owner, S2CKatamariDeltaPacket packet) {
         CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> owner), packet);
+    }
+
+    @Override
+    public void sendFullSnapshot(ServerPlayer viewer, ServerPlayer owner) {
+        if (owner == null) return;
+        com.github.tacowasa059.katamariio.common.accessors.ICustomPlayerData data =
+                (com.github.tacowasa059.katamariio.common.accessors.ICustomPlayerData) owner;
+        S2CKatamariDeltaPacket packet = new S2CKatamariDeltaPacket(
+                owner.getId(), new com.github.tacowasa059.katamariio.common.data.KatamariBlocks(data.katamariIO$getBlocks()), true);
+        if (viewer != null) {
+            CHANNEL.send(PacketDistributor.PLAYER.with(() -> viewer), packet);
+        } else {
+            CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> owner), packet);
+        }
+    }
+
+    @Override
+    public void sendConfigSync(ServerPlayer player) {
+        if (player == null) return;
+        com.github.tacowasa059.katamariio.common.networks.S2CConfigSyncPacket packet =
+                new com.github.tacowasa059.katamariio.common.networks.S2CConfigSyncPacket(
+                        com.github.tacowasa059.katamariio.common.config.KatamariConfig.toJson());
+        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), packet);
+    }
+
+    @Override
+    public void broadcastConfigSync(net.minecraft.server.MinecraftServer server) {
+        if (server == null) return;
+        com.github.tacowasa059.katamariio.common.networks.S2CConfigSyncPacket packet =
+                new com.github.tacowasa059.katamariio.common.networks.S2CConfigSyncPacket(
+                        com.github.tacowasa059.katamariio.common.config.KatamariConfig.toJson());
+        CHANNEL.send(PacketDistributor.ALL.noArg(), packet);
     }
 }

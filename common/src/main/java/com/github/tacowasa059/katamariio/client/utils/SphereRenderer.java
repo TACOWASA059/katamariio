@@ -25,9 +25,9 @@ public class SphereRenderer {
 
     public static <T extends MultiBufferSource> void drawTexturedSphere(PoseStack poseStack, T buffer,
                                                                         ResourceLocation texture, float radius, int segments, float x, float z, int packedLight, boolean lightmap2, int overlay) {
+        poseStack.mulPose(new Quaternionf(new AxisAngle4f((float) Math.PI / 4, 0, 1, 0)));
         Matrix4f positionMatrix = poseStack.last().pose();
         Matrix3f normalMatrix = poseStack.last().normal();
-        poseStack.mulPose(new Quaternionf(new AxisAngle4f((float) Math.PI / 4, 0, 1, 0)));
 
         VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(texture));
         float[] mesh = MESH_CACHE.computeIfAbsent(segments, SphereRenderer::buildMesh);
@@ -35,6 +35,7 @@ public class SphereRenderer {
             float nx = mesh[k] * radius;
             float ny = mesh[k + 1] * radius;
             float nz = mesh[k + 2] * radius;
+
             if (lightmap2) {
                 vertexConsumer.vertex(positionMatrix, nx + x, ny, nz + z).color(1.0f, 1.0f, 1.0f, 1.0f)
                         .uv(mesh[k + 3], mesh[k + 4]).overlayCoords(overlay).uv2(packedLight)
@@ -164,7 +165,6 @@ public class SphereRenderer {
         }
     }
 
-    // Appends the four quad vertices in the same winding the renderer used to emit directly.
     private static void addQuad(MeshBuilder builder, float[] posList, float[] uvList) {
         builder.add(posList[0], posList[1], posList[2], uvList[0], uvList[1]);
         builder.add(posList[3], posList[4], posList[5], uvList[2], uvList[3]);
