@@ -214,6 +214,26 @@ The config file is located at `config/katamariio.json` and supports live reloadi
 
 ---
 
+## Publishing
+
+The Gradle publish tasks upload the Fabric and Forge JARs to the existing Katamari projects on Modrinth and CurseForge. Before running them, set the API tokens in your shell:
+
+```powershell
+$env:MODRINTH_TOKEN = "your Modrinth personal access token"
+$env:CURSEFORGE_TOKEN = "your CurseForge API token"
+```
+
+Then run one or both of these tasks for each loader:
+
+```powershell
+.\gradlew.bat :fabric:modrinth :fabric:publishCurseForge
+.\gradlew.bat :forge:modrinth :forge:publishCurseForge
+```
+
+Modrinth project `katamari` and CurseForge project ID `1566362` are configured in `publishing.gradle`. Each loader is published as a separate version. Use a new `version` in `gradle.properties` before publishing a new release; do not reuse an already uploaded version.
+
+---
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).

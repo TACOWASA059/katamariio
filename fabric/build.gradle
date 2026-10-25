@@ -1,9 +1,13 @@
 plugins {
     id 'multiloader-loader'
     id 'fabric-loom'
+    id 'com.modrinth.minotaur'
+    id 'net.darkhax.curseforgegradle'
 }
 
 description = project.findProperty("description") ?: mod_name
+
+apply from: rootProject.file('publishing.gradle')
 
 dependencies {
     minecraft "com.mojang:minecraft:${minecraft_version}"

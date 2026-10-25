@@ -1,0 +1,49 @@
+// Upload tasks for the existing Katamari projects. Credentials are read only
+// when a publish task runs, so ordinary builds do not need API tokens.
+def releaseChangelog = '''
+KatamariIO 1.2.0 for Minecraft 1.20.1.
+
+### Added
+- Replaced the latitude/longitude collision grid with a uniform Fibonacci sphere grid for consistent collision sampling across the ball surface.
+- Added `/katamari resetAll` and `/katamari resetEntities`, plus configuration options for ball attachments, riding, and filters.
+- Added English and Japanese translations and reach that scales with ball size.
+
+### Fixed
+- Fixed attached blocks and entities extending beyond the collision shell, including slabs, carpets, and other partial blocks.
+- Smoothed movement over water and corrected swimming and diving controls.
+- Fixed rolling direction and synchronization of attached entities, passengers, and cameras.
+- Released entities now move clear of the ball and cannot be reattached for three seconds.
+'''.stripIndent().trim()
+
+def loaderName = project.name == 'fabric' ? 'Fabric' : 'Forge'
+def modrinthLoader = project.name == 'fabric' ? 'fabric' : 'forge'
+def artifactTask = project.name == 'fabric' ? tasks.named('remapJar').get() : tasks.named('jar').get()
+def releaseVersion = "${loaderName}${minecraft_version}-${project.version}"
+
+modrinth {
+    token = System.getenv('MODRINTH_TOKEN')
+    projectId = 'katamari'
+    versionNumber = releaseVersion
+    versionName = releaseVersion
+    versionType = 'release'
+    uploadFile = artifactTask
+    gameVersions = [minecraft_version]
+    loaders = [modrinthLoader]
+    changelog = releaseChangelog
+}
+
+def curseForgeTaskClass = plugins.findPlugin('net.darkhax.curseforgegradle').class.classLoader
+        .loadClass('net.darkhax.curseforgegradle.TaskPublishCurseForge')
+
+tasks.register('publishCurseForge', curseForgeTaskClass) {
+    group = 'publishing'
+    description = "Uploads the ${loaderName} artifact to CurseForge."
+    apiToken = System.getenv('CURSEFORGE_TOKEN')
+    def uploadedFile = upload('1566362', artifactTask)
+    uploadedFile.changelog = releaseChangelog
+    uploadedFile.changelogType = 'markdown'
+    uploadedFile.releaseType = 'release'
+    uploadedFile.addGameVersion(minecraft_version)
+    uploadedFile.addModLoader(loaderName)
+    uploadedFile.addEnvironment('Client', 'Server')
+}

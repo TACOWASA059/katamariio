@@ -1,9 +1,13 @@
 plugins {
     id 'multiloader-loader'
     id 'net.neoforged.moddev.legacyforge'
+    id 'com.modrinth.minotaur'
+    id 'net.darkhax.curseforgegradle'
 }
 
 description = project.findProperty("description") ?: mod_name
+
+apply from: rootProject.file('publishing.gradle')
 
 mixin {
     add(sourceSets.main, "${mod_id}.refmap.json")
