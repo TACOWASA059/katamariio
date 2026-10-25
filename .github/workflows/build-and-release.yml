@@ -39,16 +39,27 @@ jobs:
         shell: bash
         run: |
           mkdir -p release-assets
-          find build/libs -maxdepth 1 -type f -name "*.jar" -print0 | while IFS= read -r -d '' file; do
-            cp "$file" release-assets/
+          for dir in fabric/build/libs forge/build/libs neoforge/build/libs; do
+            if [ -d "$dir" ]; then
+              find "$dir" -maxdepth 1 -type f -name "*.jar" ! -name "*-dev.jar" -print0 | while IFS= read -r -d '' file; do
+                echo "Collecting: $file"
+                cp "$file" release-assets/
+              done
+            fi
           done
+          # Also check root build/libs as fallback
+          if [ -d "build/libs" ]; then
+            find build/libs -maxdepth 1 -type f -name "*.jar" -print0 | while IFS= read -r -d '' file; do
+              cp "$file" release-assets/
+            done
+          fi
           ls -la release-assets
 
       - name: Publish Release Assets
         uses: ncipollo/release-action@v1
         with:
-          tag: auto-build
-          name: Auto Build
+          tag: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'auto-build' }}
+          name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'Auto Build' }}
           body: |
             Automated build artifacts from push.
             Source: ${{ github.repository }}@${{ github.sha }}
