@@ -20,6 +20,8 @@ public class KatamariIOForge {
         MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
         MinecraftForge.EVENT_BUS.addListener(this::onPlayerClone);
         MinecraftForge.EVENT_BUS.addListener(this::onPlayerLogin);
+        MinecraftForge.EVENT_BUS.addListener(this::onPlayerLogout);
+        MinecraftForge.EVENT_BUS.addListener(this::onPlayerChangeDimension);
     }
 
     private void onRegisterCommands(RegisterCommandsEvent event) {
@@ -33,6 +35,18 @@ public class KatamariIOForge {
     private void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
             PlayerRespawnEventListener.onPlayerLogin(player);
+        }
+    }
+
+    private void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+            PlayerRespawnEventListener.onPlayerLogout(player);
+        }
+    }
+
+    private void onPlayerChangeDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+            PlayerRespawnEventListener.onPlayerChangeDimension(player);
         }
     }
 }

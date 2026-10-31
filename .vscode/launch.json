@@ -12,11 +12,11 @@
       "projectName": "forge",
       "mainClass": "net.neoforged.devlaunch.Main",
       "args": [
-        "@C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\forge\\build\\moddev\\clientRunProgramArgs.txt"
+        "@C:\\Users\\PC_User\\IdeaProjects\\MOD\\_release_modrinth\\KatamariIO\\forge\\build\\moddev\\clientRunProgramArgs.txt"
       ],
       "vmArgs": [
-        "@C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\forge\\build\\moddev\\clientRunVmArgs.txt",
-        "-Dfml.modFolders\u003dkatamariio%%C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\forge\\bin\\main"
+        "@C:\\Users\\PC_User\\IdeaProjects\\MOD\\_release_modrinth\\KatamariIO\\forge\\build\\moddev\\clientRunVmArgs.txt",
+        "-Dfml.modFolders\u003dkatamariio%%C:\\Users\\PC_User\\IdeaProjects\\MOD\\_release_modrinth\\KatamariIO\\forge\\bin\\main"
       ],
       "cwd": "${workspaceFolder}\\forge\\runs\\client",
       "console": "internalConsole",
@@ -33,11 +33,11 @@
       "projectName": "forge",
       "mainClass": "net.neoforged.devlaunch.Main",
       "args": [
-        "@C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\forge\\build\\moddev\\serverRunProgramArgs.txt"
+        "@C:\\Users\\PC_User\\IdeaProjects\\MOD\\_release_modrinth\\KatamariIO\\forge\\build\\moddev\\serverRunProgramArgs.txt"
       ],
       "vmArgs": [
-        "@C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\forge\\build\\moddev\\serverRunVmArgs.txt",
-        "-Dfml.modFolders\u003dkatamariio%%C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\forge\\bin\\main"
+        "@C:\\Users\\PC_User\\IdeaProjects\\MOD\\_release_modrinth\\KatamariIO\\forge\\build\\moddev\\serverRunVmArgs.txt",
+        "-Dfml.modFolders\u003dkatamariio%%C:\\Users\\PC_User\\IdeaProjects\\MOD\\_release_modrinth\\KatamariIO\\forge\\bin\\main"
       ],
       "cwd": "${workspaceFolder}\\forge\\runs\\server",
       "console": "internalConsole",
@@ -54,11 +54,11 @@
       "projectName": "neoforge",
       "mainClass": "net.neoforged.devlaunch.Main",
       "args": [
-        "@C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\neoforge\\build\\moddev\\clientRunProgramArgs.txt"
+        "@C:\\Users\\PC_User\\IdeaProjects\\MOD\\_release_modrinth\\KatamariIO\\neoforge\\build\\moddev\\clientRunProgramArgs.txt"
       ],
       "vmArgs": [
-        "@C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\neoforge\\build\\moddev\\clientRunVmArgs.txt",
-        "-Dfml.modFolders\u003dkatamariio%%C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\neoforge\\bin\\main"
+        "@C:\\Users\\PC_User\\IdeaProjects\\MOD\\_release_modrinth\\KatamariIO\\neoforge\\build\\moddev\\clientRunVmArgs.txt",
+        "-Dfml.modFolders\u003dkatamariio%%C:\\Users\\PC_User\\IdeaProjects\\MOD\\_release_modrinth\\KatamariIO\\neoforge\\bin\\main"
       ],
       "cwd": "${workspaceFolder}\\neoforge\\run",
       "console": "internalConsole",
@@ -75,11 +75,11 @@
       "projectName": "neoforge",
       "mainClass": "net.neoforged.devlaunch.Main",
       "args": [
-        "@C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\neoforge\\build\\moddev\\dataRunProgramArgs.txt"
+        "@C:\\Users\\PC_User\\IdeaProjects\\MOD\\_release_modrinth\\KatamariIO\\neoforge\\build\\moddev\\dataRunProgramArgs.txt"
       ],
       "vmArgs": [
-        "@C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\neoforge\\build\\moddev\\dataRunVmArgs.txt",
-        "-Dfml.modFolders\u003dkatamariio%%C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\neoforge\\bin\\main"
+        "@C:\\Users\\PC_User\\IdeaProjects\\MOD\\_release_modrinth\\KatamariIO\\neoforge\\build\\moddev\\dataRunVmArgs.txt",
+        "-Dfml.modFolders\u003dkatamariio%%C:\\Users\\PC_User\\IdeaProjects\\MOD\\_release_modrinth\\KatamariIO\\neoforge\\bin\\main"
       ],
       "cwd": "${workspaceFolder}\\neoforge\\run",
       "console": "internalConsole",
@@ -96,11 +96,11 @@
       "projectName": "neoforge",
       "mainClass": "net.neoforged.devlaunch.Main",
       "args": [
-        "@C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\neoforge\\build\\moddev\\serverRunProgramArgs.txt"
+        "@C:\\Users\\PC_User\\IdeaProjects\\MOD\\_release_modrinth\\KatamariIO\\neoforge\\build\\moddev\\serverRunProgramArgs.txt"
       ],
       "vmArgs": [
-        "@C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\neoforge\\build\\moddev\\serverRunVmArgs.txt",
-        "-Dfml.modFolders\u003dkatamariio%%C:\\Users\\PC_User\\IdeaProjects\\ForgeMOD\\KatamariIO\\neoforge\\bin\\main"
+        "@C:\\Users\\PC_User\\IdeaProjects\\MOD\\_release_modrinth\\KatamariIO\\neoforge\\build\\moddev\\serverRunVmArgs.txt",
+        "-Dfml.modFolders\u003dkatamariio%%C:\\Users\\PC_User\\IdeaProjects\\MOD\\_release_modrinth\\KatamariIO\\neoforge\\bin\\main"
       ],
       "cwd": "${workspaceFolder}\\neoforge\\run",
       "console": "internalConsole",

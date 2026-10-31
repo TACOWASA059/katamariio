@@ -10,9 +10,7 @@ public final class NeoForgeModDataSerializers {
             DeferredRegister.create(net.neoforged.neoforge.registries.NeoForgeRegistries.Keys.ENTITY_DATA_SERIALIZERS, KatamariIO.MODID);
 
     static {
-        ENTITY_DATA_SERIALIZERS.register("vec3_list", () -> ModDataSerializers.VEC3_LIST);
-        ENTITY_DATA_SERIALIZERS.register("quaternion_list", () -> ModDataSerializers.QUATERNION_LIST);
-        ENTITY_DATA_SERIALIZERS.register("block_list", () -> ModDataSerializers.BLOCK_LIST);
+        ENTITY_DATA_SERIALIZERS.register("katamari_blocks", () -> ModDataSerializers.KATAMARI_BLOCKS);
     }
 
     private NeoForgeModDataSerializers() {

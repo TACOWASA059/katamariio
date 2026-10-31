@@ -9,29 +9,59 @@ import org.joml.AxisAngle4f;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
-import org.joml.Vector3f;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 public class SphereRenderer {
+    // The sphere geometry (unit positions + UVs) only depends on the segment count, not on the
+    // radius. Build it once per segment count and cache it, then just scale by radius each frame
+    // instead of recomputing every sin/cos/sqrt. The two shell layers (radius and radius*1.01)
+    // are baked into the cached unit positions, so a single multiply by the frame radius restores
+    // the exact same vertices the per-frame math used to produce. Layout: 5 floats per vertex
+    // (ux, uy, uz, u, v).
+    private static final Map<Integer, float[]> MESH_CACHE = new HashMap<>();
+
     public static <T extends MultiBufferSource> void drawTexturedSphere(PoseStack poseStack, T buffer,
                                                                         ResourceLocation texture, float radius, int segments, float x, float z, int packedLight, boolean lightmap2, int overlay) {
-        Matrix4f positionMatrix = poseStack.last().pose();
-        Matrix3f normalMatrix = poseStack.last().normal();
         poseStack.mulPose(new Quaternionf(new AxisAngle4f((float) Math.PI / 4, 0, 1, 0)));
+        Matrix4f positionMatrix = poseStack.last().pose();
+        PoseStack.Pose pose = poseStack.last();
 
         VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(texture));
-        addBottomSphere(radius, segments, x, z, vertexConsumer, positionMatrix, normalMatrix, 0.1875F, false, packedLight, lightmap2, overlay);
-        addBottomSphere(radius * 1.01F, segments, x, z, vertexConsumer, positionMatrix, normalMatrix, 0.6875F, false, packedLight, lightmap2, overlay);
-        addBottomSphere(radius, segments, x, z, vertexConsumer, positionMatrix, normalMatrix, 0.3125F, true, packedLight, lightmap2, overlay);
-        addBottomSphere(radius * 1.01F, segments, x, z, vertexConsumer, positionMatrix, normalMatrix, 0.8125F, true, packedLight, lightmap2, overlay);
-        addSideSphere(radius, segments, x, z, vertexConsumer, positionMatrix, normalMatrix, false, packedLight, lightmap2, overlay);
-        addSideSphere(radius * 1.01F, segments, x, z, vertexConsumer, positionMatrix, normalMatrix, true, packedLight, lightmap2, overlay);
+        float[] mesh = MESH_CACHE.computeIfAbsent(segments, SphereRenderer::buildMesh);
+        for (int k = 0; k < mesh.length; k += 5) {
+            float nx = mesh[k] * radius;
+            float ny = mesh[k + 1] * radius;
+            float nz = mesh[k + 2] * radius;
+
+            if (lightmap2) {
+                vertexConsumer.addVertex(positionMatrix, nx + x, ny, nz + z).setColor(1.0f, 1.0f, 1.0f, 1.0f)
+                        .setUv(mesh[k + 3], mesh[k + 4]).setOverlay(overlay).setLight(packedLight)
+                        .setNormal(pose, nx, ny, nz);
+            } else {
+                vertexConsumer.addVertex(positionMatrix, nx + x, ny, nz + z).setColor(1.0f, 1.0f, 1.0f, 1.0f)
+                        .setUv(mesh[k + 3], mesh[k + 4]).setOverlay(overlay).setLight(packedLight)
+                        .setNormal(nx, ny, nz);
+            }
+        }
 
         poseStack.mulPose(new Quaternionf(new AxisAngle4f(-(float) Math.PI / 4, 0, 1, 0)));
     }
 
-    private static void addBottomSphere(float radius, int segments, float x, float z, VertexConsumer vertexBuilder,
-                                        Matrix4f positionMatrix, Matrix3f normalMatrix, float u0, boolean isLower, int packedLight,
-                                        boolean lightmap2, int overlay) {
+    private static float[] buildMesh(int segments) {
+        MeshBuilder builder = new MeshBuilder();
+        addBottomSphere(builder, 1.0F, segments, 0.1875F, false);
+        addBottomSphere(builder, 1.01F, segments, 0.6875F, false);
+        addBottomSphere(builder, 1.0F, segments, 0.3125F, true);
+        addBottomSphere(builder, 1.01F, segments, 0.8125F, true);
+        addSideSphere(builder, 1.0F, segments, false);
+        addSideSphere(builder, 1.01F, segments, true);
+        return builder.toArray();
+    }
+
+    private static void addBottomSphere(MeshBuilder builder, float radius, int segments, float u0, boolean isLower) {
         float cubeSize = 0.0625F;
         for (int j = 0; j < Math.round(segments / 4f); j++) {
             float theta = (float) (Math.PI * j / (4 * Math.round(segments / 4f)));
@@ -81,14 +111,12 @@ public class SphereRenderer {
                 float nextIJV = 0.0625F + getSquareZ(nextIJx1, nextIJz1, cubeSize);
 
                 float[] uvList = new float[]{u, v, nextIU, nextIV, nextJU, nextJV, nextIJU, nextIJV};
-                addSideSphereQuads(vertexBuilder, positionMatrix, normalMatrix, x, z, posList, uvList, packedLight, lightmap2, overlay);
+                addQuad(builder, posList, uvList);
             }
         }
     }
 
-    private static void addSideSphere(float radius, int segments, float x, float z, VertexConsumer vertexBuilder,
-                                      Matrix4f positionMatrix, Matrix3f normalMatrix, boolean isInner, int packedLight,
-                                      boolean lightmap2, int overlay) {
+    private static void addSideSphere(MeshBuilder builder, float radius, int segments, boolean isInner) {
         for (int j = Math.round(segments / 4f); j < Math.round(3 * segments / 4f); j++) {
             float theta = (float) (Math.PI * j / (4 * Math.round(segments / 4f)));
             float sinTheta = (float) Math.sin(theta);
@@ -132,40 +160,16 @@ public class SphereRenderer {
                 }
 
                 float[] uvList = new float[]{u, v, nextIU, v, nextJU, nextJV, nextIJU, nextJV};
-                addSideSphereQuads(vertexBuilder, positionMatrix, normalMatrix, x, z, posList, uvList, packedLight, lightmap2, overlay);
+                addQuad(builder, posList, uvList);
             }
         }
     }
 
-    private static void addSideSphereQuads(VertexConsumer vertexConsumer, Matrix4f positionMatrix, Matrix3f normalMatrix,
-                                           float x, float z, float[] posList, float[] uvList, int packedLight, boolean lightmap2, int overlay) {
-        if (lightmap2) {
-            Vector3f normal0 = transformNormal(normalMatrix, posList[0], posList[1], posList[2]);
-            Vector3f normal1 = transformNormal(normalMatrix, posList[3], posList[4], posList[5]);
-            Vector3f normal2 = transformNormal(normalMatrix, posList[9], posList[10], posList[11]);
-            Vector3f normal3 = transformNormal(normalMatrix, posList[6], posList[7], posList[8]);
-            vertexConsumer.addVertex(positionMatrix, posList[0] + x, posList[1], posList[2] + z).setColor(1.0f, 1.0f, 1.0f, 1.0f)
-                    .setUv(uvList[0], uvList[1]).setOverlay(overlay).setLight(packedLight).setNormal(normal0.x(), normal0.y(), normal0.z());
-            vertexConsumer.addVertex(positionMatrix, posList[3] + x, posList[4], posList[5] + z).setColor(1.0f, 1.0f, 1.0f, 1.0f)
-                    .setUv(uvList[2], uvList[3]).setOverlay(overlay).setLight(packedLight).setNormal(normal1.x(), normal1.y(), normal1.z());
-            vertexConsumer.addVertex(positionMatrix, posList[9] + x, posList[10], posList[11] + z).setColor(1.0f, 1.0f, 1.0f, 1.0f)
-                    .setUv(uvList[6], uvList[7]).setOverlay(overlay).setLight(packedLight).setNormal(normal2.x(), normal2.y(), normal2.z());
-            vertexConsumer.addVertex(positionMatrix, posList[6] + x, posList[7], posList[8] + z).setColor(1.0f, 1.0f, 1.0f, 1.0f)
-                    .setUv(uvList[4], uvList[5]).setOverlay(overlay).setLight(packedLight).setNormal(normal3.x(), normal3.y(), normal3.z());
-        } else {
-            vertexConsumer.addVertex(positionMatrix, posList[0] + x, posList[1], posList[2] + z).setColor(1.0f, 1.0f, 1.0f, 1.0f)
-                    .setUv(uvList[0], uvList[1]).setOverlay(overlay).setLight(packedLight).setNormal(posList[0], posList[1], posList[2]);
-            vertexConsumer.addVertex(positionMatrix, posList[3] + x, posList[4], posList[5] + z).setColor(1.0f, 1.0f, 1.0f, 1.0f)
-                    .setUv(uvList[2], uvList[3]).setOverlay(overlay).setLight(packedLight).setNormal(posList[3], posList[4], posList[5]);
-            vertexConsumer.addVertex(positionMatrix, posList[9] + x, posList[10], posList[11] + z).setColor(1.0f, 1.0f, 1.0f, 1.0f)
-                    .setUv(uvList[6], uvList[7]).setOverlay(overlay).setLight(packedLight).setNormal(posList[9], posList[10], posList[11]);
-            vertexConsumer.addVertex(positionMatrix, posList[6] + x, posList[7], posList[8] + z).setColor(1.0f, 1.0f, 1.0f, 1.0f)
-                    .setUv(uvList[4], uvList[5]).setOverlay(overlay).setLight(packedLight).setNormal(posList[6], posList[7], posList[8]);
-        }
-    }
-
-    private static Vector3f transformNormal(Matrix3f normalMatrix, float x, float y, float z) {
-        return normalMatrix.transform(new Vector3f(x, y, z)).normalize();
+    private static void addQuad(MeshBuilder builder, float[] posList, float[] uvList) {
+        builder.add(posList[0], posList[1], posList[2], uvList[0], uvList[1]);
+        builder.add(posList[3], posList[4], posList[5], uvList[2], uvList[3]);
+        builder.add(posList[9], posList[10], posList[11], uvList[6], uvList[7]);
+        builder.add(posList[6], posList[7], posList[8], uvList[4], uvList[5]);
     }
 
     private static float getSquareZ(float x1, float z1, float cubeSize) {
@@ -176,5 +180,25 @@ public class SphereRenderer {
     private static float getSquareX(float x1, float z1, float cubeSize) {
         return (float) (cubeSize * (0.5 * Math.sqrt(2 + x1 * x1 - z1 * z1 + 2 * Math.sqrt(2.0) * x1)
                 - 0.5 * Math.sqrt(2 + x1 * x1 - z1 * z1 - 2 * Math.sqrt(2.0) * x1)));
+    }
+
+    private static final class MeshBuilder {
+        private float[] data = new float[1024];
+        private int size = 0;
+
+        void add(float x, float y, float z, float u, float v) {
+            if (size + 5 > data.length) {
+                data = Arrays.copyOf(data, data.length * 2);
+            }
+            data[size++] = x;
+            data[size++] = y;
+            data[size++] = z;
+            data[size++] = u;
+            data[size++] = v;
+        }
+
+        float[] toArray() {
+            return Arrays.copyOf(data, size);
+        }
     }
 }

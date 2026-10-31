@@ -2,6 +2,7 @@ package com.github.tacowasa059.katamariio.common.utils;
 
 import com.github.tacowasa059.katamariio.common.accessors.ICustomPlayerData;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.joml.AxisAngle4f;
 import org.joml.Math;
@@ -56,13 +57,25 @@ public class QuaternionUtils {
         return value;
     }
 
-    public static Quaternionf getQuaternionFromEntity(Entity entity) {
-        float pitch = entity.getXRot();
-        float yaw = entity.getYRot();
-        Quaternionf pitchQuat = new Quaternionf(new AxisAngle4f((float) (pitch * org.joml.Math.PI / 180), 1, 0, 0));
-        Quaternionf yawQuat = new Quaternionf(new AxisAngle4f((float) (-yaw * org.joml.Math.PI / 180), 0, 1, 0));
+    public static Quaternionf getInterpolatedQuaternionFromEntity(Entity entity, float partialTicks) {
+        Entity vehicle = entity.getVehicle();
+        float yaw;
+        float pitch;
+        if (vehicle != null) {
+            yaw = net.minecraft.util.Mth.rotLerp(partialTicks, vehicle.yRotO, vehicle.getYRot());
+            pitch = net.minecraft.util.Mth.lerp(partialTicks, vehicle.xRotO, vehicle.getXRot());
+        } else {
+            yaw = net.minecraft.util.Mth.rotLerp(partialTicks, entity.yRotO, entity.getYRot());
+            pitch = net.minecraft.util.Mth.lerp(partialTicks, entity.xRotO, entity.getXRot());
+        }
+        Quaternionf pitchQuat = new Quaternionf(new AxisAngle4f((float) (pitch * org.joml.Math.PI / 180.0), 1, 0, 0));
+        Quaternionf yawQuat = new Quaternionf(new AxisAngle4f((float) (-yaw * org.joml.Math.PI / 180.0), 0, 1, 0));
         yawQuat.mul(pitchQuat);
         return yawQuat;
+    }
+
+    public static Quaternionf getQuaternionFromEntity(Entity entity) {
+        return getInterpolatedQuaternionFromEntity(entity, 1.0f);
     }
 
     public static Quaternionf slerp(Quaternionf start, Quaternionf end, float t) {
@@ -70,6 +83,24 @@ public class QuaternionUtils {
         if (dot < 0.0f) {
             end = new Quaternionf(-end.x(), -end.y(), -end.z(), -end.w());
             dot = -dot;
+        }
+
+        // If quaternions are extremely close, linearly interpolate to avoid division by zero (sinTheta0 == 0)
+        if (dot > 0.9995f) {
+            float s0 = 1.0f - t;
+            float s1 = t;
+            Quaternionf res = new Quaternionf(
+                    (s0 * start.x()) + (s1 * end.x()),
+                    (s0 * start.y()) + (s1 * end.y()),
+                    (s0 * start.z()) + (s1 * end.z()),
+                    (s0 * start.w()) + (s1 * end.w())
+            );
+            float lenSq = res.x * res.x + res.y * res.y + res.z * res.z + res.w * res.w;
+            if (lenSq > 1.0E-6f) {
+                float invLen = (float) (1.0 / java.lang.Math.sqrt(lenSq));
+                res.set(res.x * invLen, res.y * invLen, res.z * invLen, res.w * invLen);
+            }
+            return res;
         }
 
         float theta0 = org.joml.Math.acos(dot);

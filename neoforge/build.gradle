@@ -1,7 +1,11 @@
 plugins {
     id 'multiloader-loader'
     id 'net.neoforged.moddev'
+    id 'com.modrinth.minotaur'
+    id 'net.darkhax.curseforgegradle'
 }
+
+apply from: rootProject.file('publishing.gradle')
 
 neoForge {
     version = neoforge_version

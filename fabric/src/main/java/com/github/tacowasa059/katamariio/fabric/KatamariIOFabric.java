@@ -23,5 +23,9 @@ public class KatamariIOFabric implements ModInitializer {
                 PlayerRespawnEventListener.onPlayerClone(oldPlayer, newPlayer));
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
                 PlayerRespawnEventListener.onPlayerLogin(handler.getPlayer()));
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
+                PlayerRespawnEventListener.onPlayerLogout(handler.getPlayer()));
+        net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((player, origin, destination) ->
+                PlayerRespawnEventListener.onPlayerChangeDimension(player));
     }
 }

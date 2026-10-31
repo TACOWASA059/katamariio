@@ -1,0 +1,39 @@
+// Upload tasks for the existing Katamari projects. Credentials are read only
+// when a publish task runs, so ordinary builds do not need API tokens.
+def releaseChangelog = rootProject.file('RELEASE_NOTES_1.2.0.md').getText('UTF-8').trim()
+
+def isFabric = project.name == 'fabric'
+def isNeoForge = project.name == 'neoforge'
+def loaderName = isFabric ? 'Fabric' : (isNeoForge ? 'NeoForge' : 'Forge')
+def modrinthLoader = project.name
+// 1.21.1 Forge (reobf = false) and NeoForge both ship the plain jar with Mojang mappings.
+def uploadArtifact = isFabric ? tasks.named('remapJar').get() : tasks.named('jar').get()
+def releaseVersion = "${loaderName}${minecraft_version}-${project.version}"
+
+modrinth {
+    token = System.getenv('MODRINTH_TOKEN')
+    projectId = 'katamari'
+    versionNumber = releaseVersion
+    versionName = releaseVersion
+    versionType = 'release'
+    uploadFile = uploadArtifact
+    gameVersions = [minecraft_version]
+    loaders = [modrinthLoader]
+    changelog = releaseChangelog
+}
+
+def curseForgeTaskClass = plugins.findPlugin('net.darkhax.curseforgegradle').class.classLoader
+        .loadClass('net.darkhax.curseforgegradle.TaskPublishCurseForge')
+
+tasks.register('publishCurseForge', curseForgeTaskClass) {
+    group = 'publishing'
+    description = "Uploads the ${loaderName} artifact to CurseForge."
+    apiToken = System.getenv('CURSEFORGE_TOKEN')
+    def uploadedFile = upload('1566362', uploadArtifact)
+    uploadedFile.changelog = releaseChangelog
+    uploadedFile.changelogType = 'markdown'
+    uploadedFile.releaseType = 'release'
+    uploadedFile.addGameVersion(minecraft_version)
+    uploadedFile.addModLoader(loaderName)
+    uploadedFile.addEnvironment('Client', 'Server')
+}
