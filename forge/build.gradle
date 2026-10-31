@@ -3,10 +3,8 @@ plugins {
     id 'net.minecraftforge.gradle' version '[6.0.46,6.2)'
     id 'org.spongepowered.mixin' version '0.7-SNAPSHOT'
     id 'idea'
-}
-
-base {
-    archivesName = "${mod_name}-forge-${minecraft_version}"
+    id 'com.modrinth.minotaur'
+    id 'net.darkhax.curseforgegradle'
 }
 
 mixin {
@@ -107,3 +105,5 @@ sourceSets.configureEach {
         }
     }
 }
+
+apply from: rootProject.file('publishing.gradle')

@@ -1,10 +1,14 @@
 package com.github.tacowasa059.katamariio.forge;
 
 import com.github.tacowasa059.katamariio.KatamariIO;
+import com.github.tacowasa059.katamariio.common.config.KatamariConfig;
+import com.github.tacowasa059.katamariio.common.networks.S2CConfigSyncPacket;
+import com.github.tacowasa059.katamariio.common.networks.S2CKatamariDeltaPacket;
 import com.github.tacowasa059.katamariio.common.networks.S2CPlayerPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -25,6 +29,16 @@ public final class ForgeClientStateSync {
         packet.applyToPlayer(player);
     }
 
+    public static void receiveDelta(S2CKatamariDeltaPacket packet) {
+        packet.apply(Minecraft.getInstance().level);
+    }
+
+    public static void receiveConfig(S2CConfigSyncPacket packet) {
+        if (packet != null) {
+            packet.apply();
+        }
+    }
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent.Post event) {
         if (pendingPacket == null) {
@@ -37,5 +51,10 @@ public final class ForgeClientStateSync {
         S2CPlayerPacket packet = pendingPacket;
         pendingPacket = null;
         packet.applyToPlayer(player);
+    }
+
+    @SubscribeEvent
+    public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        KatamariConfig.load();
     }
 }

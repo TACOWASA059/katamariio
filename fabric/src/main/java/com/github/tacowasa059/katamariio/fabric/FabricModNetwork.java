@@ -1,31 +1,34 @@
 package com.github.tacowasa059.katamariio.fabric;
 
-import com.github.tacowasa059.katamariio.KatamariIO;
+import com.github.tacowasa059.katamariio.common.accessors.ICustomPlayerData;
+import com.github.tacowasa059.katamariio.common.config.KatamariConfig;
+import com.github.tacowasa059.katamariio.common.data.KatamariBlocks;
+import com.github.tacowasa059.katamariio.common.networks.KatamariPayloads;
 import com.github.tacowasa059.katamariio.common.networks.ModNetwork;
 import com.github.tacowasa059.katamariio.common.networks.RemoveBlockPacket;
+import com.github.tacowasa059.katamariio.common.networks.S2CConfigSyncPacket;
+import com.github.tacowasa059.katamariio.common.networks.S2CKatamariDeltaPacket;
 import com.github.tacowasa059.katamariio.common.networks.S2CPlayerPacket;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 
 public class FabricModNetwork implements ModNetwork.NetworkHandler {
-    static final CustomPacketPayload.Type<RemoveBlockPayload> REMOVE_BLOCK_ID =
-            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(KatamariIO.MODID, "remove_block"));
-    static final CustomPacketPayload.Type<S2CPlayerPayload> S2C_PLAYER_ID =
-            new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(KatamariIO.MODID, "player_sync"));
-
     @Override
     public void register() {
-        PayloadTypeRegistry.playC2S().register(REMOVE_BLOCK_ID, RemoveBlockPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(S2C_PLAYER_ID, S2CPlayerPayload.CODEC);
-        ServerPlayNetworking.registerGlobalReceiver(REMOVE_BLOCK_ID, (payload, context) ->
-                payload.toPacket().handle(context.player()));
+        PayloadTypeRegistry.playC2S().register(KatamariPayloads.RemoveBlock.TYPE, KatamariPayloads.RemoveBlock.CODEC);
+        PayloadTypeRegistry.playC2S().register(KatamariPayloads.Rotation.TYPE, KatamariPayloads.Rotation.CODEC);
+        PayloadTypeRegistry.playS2C().register(KatamariPayloads.PlayerSync.TYPE, KatamariPayloads.PlayerSync.CODEC);
+        PayloadTypeRegistry.playS2C().register(KatamariPayloads.Delta.TYPE, KatamariPayloads.Delta.CODEC);
+        PayloadTypeRegistry.playS2C().register(KatamariPayloads.ConfigSync.TYPE, KatamariPayloads.ConfigSync.CODEC);
+
+        ServerPlayNetworking.registerGlobalReceiver(KatamariPayloads.RemoveBlock.TYPE,
+                (payload, context) -> payload.packet().handle(context.player()));
+        ServerPlayNetworking.registerGlobalReceiver(KatamariPayloads.Rotation.TYPE,
+                (payload, context) -> payload.packet().handle(context.player()));
     }
 
     @Override
@@ -34,76 +37,55 @@ public class FabricModNetwork implements ModNetwork.NetworkHandler {
     }
 
     @Override
+    public void sendRotationToServer(Quaternionf quaternion) {
+        FabricClientNetworkSender.sendRotationToServer(quaternion);
+    }
+
+    @Override
     public void sendInitialData(ServerPlayer player, S2CPlayerPacket packet) {
-        ServerPlayNetworking.send(player, S2CPlayerPayload.fromPacket(packet));
+        ServerPlayNetworking.send(player, new KatamariPayloads.PlayerSync(packet));
     }
 
-    record RemoveBlockPayload(net.minecraft.core.BlockPos pos, Vec3 playerPos) implements CustomPacketPayload {
-        static final StreamCodec<RegistryFriendlyByteBuf, RemoveBlockPayload> CODEC = StreamCodec.of((buf, payload) -> {
-            buf.writeBlockPos(payload.pos);
-            buf.writeDouble(payload.playerPos.x);
-            buf.writeDouble(payload.playerPos.y);
-            buf.writeDouble(payload.playerPos.z);
-        }, buf -> new RemoveBlockPayload(
-                buf.readBlockPos(),
-                new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble())
-        ));
-
-        @Override
-        public Type<? extends CustomPacketPayload> type() {
-            return REMOVE_BLOCK_ID;
-        }
-
-        RemoveBlockPacket toPacket() {
-            return new RemoveBlockPacket(this.pos, this.playerPos);
-        }
-
-        static RemoveBlockPayload fromPacket(RemoveBlockPacket packet) {
-            return new RemoveBlockPayload(packet.pos(), packet.playerPos());
+    @Override
+    public void sendBlocksDelta(ServerPlayer owner, S2CKatamariDeltaPacket packet) {
+        sendDelta(owner, packet);
+        for (ServerPlayer viewer : PlayerLookup.tracking(owner)) {
+            sendDelta(viewer, packet);
         }
     }
 
-    record S2CPlayerPayload(float collisionSize, float renderSize, boolean flag, float restitution,
-                            Quaternionf quaternion, Vec3 currentPosition) implements CustomPacketPayload {
-        static final StreamCodec<RegistryFriendlyByteBuf, S2CPlayerPayload> CODEC = StreamCodec.of((buf, payload) -> {
-            buf.writeFloat(payload.collisionSize);
-            buf.writeFloat(payload.renderSize);
-            buf.writeBoolean(payload.flag);
-            buf.writeFloat(payload.restitution);
-            buf.writeFloat(payload.quaternion.x);
-            buf.writeFloat(payload.quaternion.y);
-            buf.writeFloat(payload.quaternion.z);
-            buf.writeFloat(payload.quaternion.w);
-            buf.writeDouble(payload.currentPosition.x);
-            buf.writeDouble(payload.currentPosition.y);
-            buf.writeDouble(payload.currentPosition.z);
-        }, buf -> new S2CPlayerPayload(
-                buf.readFloat(),
-                buf.readFloat(),
-                buf.readBoolean(),
-                buf.readFloat(),
-                new Quaternionf(buf.readFloat(), buf.readFloat(), buf.readFloat(), buf.readFloat()),
-                new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble())
-        ));
-
-        @Override
-        public Type<? extends CustomPacketPayload> type() {
-            return S2C_PLAYER_ID;
+    @Override
+    public void sendFullSnapshot(ServerPlayer viewer, ServerPlayer owner) {
+        if (owner == null) return;
+        ICustomPlayerData data = (ICustomPlayerData) owner;
+        S2CKatamariDeltaPacket packet = new S2CKatamariDeltaPacket(
+                owner.getId(), new KatamariBlocks(data.katamariIO$getBlocks()), true);
+        if (viewer != null) {
+            sendDelta(viewer, packet);
+        } else {
+            sendDelta(owner, packet);
+            for (ServerPlayer v : PlayerLookup.tracking(owner)) {
+                sendDelta(v, packet);
+            }
         }
+    }
 
-        S2CPlayerPacket toPacket() {
-            return new S2CPlayerPacket(collisionSize, renderSize, flag, restitution, quaternion, currentPosition);
-        }
+    private static void sendDelta(ServerPlayer target, S2CKatamariDeltaPacket packet) {
+        ServerPlayNetworking.send(target, new KatamariPayloads.Delta(packet));
+    }
 
-        static S2CPlayerPayload fromPacket(S2CPlayerPacket packet) {
-            return new S2CPlayerPayload(
-                    packet.collisionSize(),
-                    packet.renderSize(),
-                    packet.flag(),
-                    packet.restitution(),
-                    new Quaternionf(packet.quaternion()),
-                    packet.currentPosition()
-            );
+    @Override
+    public void sendConfigSync(ServerPlayer player) {
+        if (player == null) return;
+        ServerPlayNetworking.send(player, new KatamariPayloads.ConfigSync(new S2CConfigSyncPacket(KatamariConfig.toJson())));
+    }
+
+    @Override
+    public void broadcastConfigSync(MinecraftServer server) {
+        if (server == null) return;
+        KatamariPayloads.ConfigSync payload = new KatamariPayloads.ConfigSync(new S2CConfigSyncPacket(KatamariConfig.toJson()));
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            ServerPlayNetworking.send(player, payload);
         }
     }
 }

@@ -1,6 +1,8 @@
 plugins {
     id 'multiloader-loader'
     id 'fabric-loom'
+    id 'com.modrinth.minotaur'
+    id 'net.darkhax.curseforgegradle'
 }
 
 description = project.findProperty("description") ?: mod_name
@@ -65,3 +67,5 @@ loom.remapConfigurations.configureEach {
         }
     }
 }
+
+apply from: rootProject.file('publishing.gradle')

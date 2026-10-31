@@ -35,4 +35,18 @@ public class KatamariIOForge {
             PlayerRespawnEventListener.onPlayerLogin(player);
         }
     }
+
+    @SubscribeEvent
+    private static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+            PlayerRespawnEventListener.onPlayerLogout(player);
+        }
+    }
+
+    @SubscribeEvent
+    private static void onPlayerChangeDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+            PlayerRespawnEventListener.onPlayerChangeDimension(player);
+        }
+    }
 }

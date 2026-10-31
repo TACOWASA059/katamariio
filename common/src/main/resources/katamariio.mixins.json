@@ -8,13 +8,17 @@
     "common.BlockCollisionsMixin",
     "common.EntityMixin",
     "common.LivingEntityMixin",
-    "common.PlayerMixin"
+    "common.PlayerMixin",
+    "common.ServerEntityMixin",
+    "common.ServerGamePacketListenerImplMixin"
   ],
   "client": [
     "client.AvatarRendererMixin",
     "client.CameraMixin",
+    "client.EntityRenderDispatcherMixin",
     "client.GameRendererMixin",
-    "client.KeyboardInputMixin"
+    "client.KeyboardInputMixin",
+    "client.LocalPlayerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

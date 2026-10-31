@@ -8,6 +8,9 @@ import net.minecraft.world.entity.player.Player;
 
 public class PlayerRespawnEventListener {
     public static void onPlayerClone(Player originalPlayer, Player newPlayer) {
+        if (originalPlayer instanceof ServerPlayer serverOriginal) {
+            com.github.tacowasa059.katamariio.common.entities.KatamariEntityAttacher.onPlayerLogout(serverOriginal);
+        }
         ICustomPlayerData originalPlayerData = (ICustomPlayerData) originalPlayer;
         ICustomPlayerData newPlayerData = (ICustomPlayerData) newPlayer;
 
@@ -19,8 +22,24 @@ public class PlayerRespawnEventListener {
         newPlayerData.katamariIO$clearAttachedBlocks();
     }
 
+    public static void onPlayerLogout(ServerPlayer player) {
+        if (player != null) {
+            com.github.tacowasa059.katamariio.common.entities.KatamariEntityAttacher.onPlayerLogout(player);
+        }
+    }
+
+    public static void onPlayerChangeDimension(ServerPlayer player) {
+        if (player != null) {
+            com.github.tacowasa059.katamariio.common.entities.KatamariEntityAttacher.onPlayerLogout(player);
+        }
+    }
+
     public static void onPlayerLogin(ServerPlayer player) {
         if (player != null) {
+            if (player.getVehicle() == null) {
+                player.setNoGravity(false);
+                player.noPhysics = false;
+            }
             ICustomPlayerData data = (ICustomPlayerData) player;
             ModNetwork.sendInitialData(
                     player,
@@ -31,6 +50,14 @@ public class PlayerRespawnEventListener {
                     data.katamariIO$getQuaternion(),
                     data.katamariIO$getCurrentPosition()
             );
+            ModNetwork.sendFullSnapshot(player, player);
+            ModNetwork.sendConfigSync(player);
+        }
+    }
+
+    public static void onStartTracking(ServerPlayer viewer, ServerPlayer tracked) {
+        if (viewer != null && tracked != null) {
+            ModNetwork.sendFullSnapshot(viewer, tracked);
         }
     }
 }

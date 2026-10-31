@@ -1,6 +1,8 @@
 plugins {
     id 'multiloader-loader'
     id 'net.neoforged.moddev'
+    id 'com.modrinth.minotaur'
+    id 'net.darkhax.curseforgegradle'
 }
 
 neoForge {
@@ -58,3 +60,5 @@ sourceSets.configureEach {
         }
     }
 }
+
+apply from: rootProject.file('publishing.gradle')

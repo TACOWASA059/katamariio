@@ -1,8 +1,13 @@
 .gradle
 .idea
-.vscode
-.claude
 run
 runs
 run-data
 build/
+runs
+.claude
+TEST_CASES.md
+GEMINI.md
+jar_contents.txt
+**/logs/
+common/config/
