@@ -135,7 +135,8 @@ public final class KatamariBlockBuffer {
         RenderType renderType = RenderType.cutout();
         renderType.setupRenderState();
         buffer.bind();
-        buffer.drawWithShader(new Matrix4f(poseStack.last().pose()), RenderSystem.getProjectionMatrix(),
+        Matrix4f modelViewMatrix = new Matrix4f(RenderSystem.getModelViewMatrix()).mul(poseStack.last().pose());
+        buffer.drawWithShader(modelViewMatrix, RenderSystem.getProjectionMatrix(),
                 GameRenderer.getRendertypeCutoutShader());
         VertexBuffer.unbind();
         renderType.clearRenderState();

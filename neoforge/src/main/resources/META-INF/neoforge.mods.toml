@@ -4,7 +4,7 @@ license = "MIT"
 
 [[mods]]
 modId = "katamariio"
-version = "1.0.1"
+version = "${version}"
 displayName = "KatamariIO"
 logoFile = "icon.png"
 credits = ""

@@ -267,7 +267,7 @@ public final class KatamariPlayerRenderer {
         // Calculate dynamic scale factor based on ball size, local player size, and camera distance
         float totalScale = KatamariIndicatorHelper.computeScaleFactor(mySize, ballDiameter, camDist);
         float scale = KatamariIndicatorHelper.BASE_SCALE * totalScale;
-        poseStack.scale(-scale, -scale, scale);
+        poseStack.scale(scale, -scale, scale);
 
         Matrix4f matrix = poseStack.last().pose();
         Font font = mc.font;

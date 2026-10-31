@@ -248,7 +248,7 @@ public abstract class LivingEntityMixin extends Entity {
             cir.setReturnValue(
                     EntityDimensions.scalable(size, size)
                             .withEyeHeight(0.85F * size)
-                            .withAttachments(EntityAttachments.builder().attach(EntityAttachment.VEHICLE, new Vec3(0.0, 0.15, 0.0)))
+                            .withAttachments(EntityAttachments.builder().attach(EntityAttachment.VEHICLE, new Vec3(0.0, -0.15, 0.0)))
             );
         }
     }
